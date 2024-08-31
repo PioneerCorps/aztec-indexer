@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  indexer:
+    build: .
+    container_name: indexer
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - PXE_URL=https://aztec.namascan.com/
+  
+  api:
+    image: indexer-api:latest
+    container_name: api
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+
+
+volumes:
+  mongo-data:

@@ -1,0 +1,26 @@
+{
+  "name": "aztec_block_follower",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "yarn clean && tsc -b",
+    "build:dev": "tsc -b --watch",
+    "clean": "rm -rf ./dest tsconfig.tsbuildinfo",
+    "start": "yarn build && DEBUG='token' node ./dest/index.js"
+  },
+  "dependencies": {
+    "@aztec/accounts": "0.47.1",
+    "@aztec/aztec.js": "0.47.1",
+    "@aztec/noir-contracts.js": "0.47.1",
+    "@types/node": "^20.6.3",
+    "mongoose": "^8.5.4",
+    "typescript": "^5.2.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.2.0",
+    "@typescript-eslint/parser": "^8.2.0",
+    "eslint": "^9.9.1"
+  }
+}
