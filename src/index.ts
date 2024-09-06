@@ -76,7 +76,7 @@ async function main() {
                 for (let i = 0; i < blockTxEffect.txEffect.length; i++) {
                     const txEffect = blockTxEffect.txEffect[i];
                     const TxEffect = new Transaction({
-                        hash: txEffect.hash().toString('hex'),
+                        hash: txEffect.txHash.toString(),
                         index: i,
                         blockNumber: blockTxEffect.blockNumber,
                         //revertCode: txEffect.revertCode,
@@ -89,7 +89,7 @@ async function main() {
                         uneencryptedLogs: JSON.stringify(txEffect.unencryptedLogs.toJSON()),
                     });
                     const { _id, ...TxEffectWithoutId } = TxEffect.toObject();
-                    Transaction.findOneAndUpdate({hash: txEffect.hash().toString('hex')}, TxEffectWithoutId, {upsert: true}).catch((error) => {
+                    Transaction.findOneAndUpdate({hash: txEffect.txHash.toString()}, TxEffectWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error updating transaction: ', error.message);
                     });
                 }
