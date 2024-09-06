@@ -89,7 +89,7 @@ async function main() {
                         uneencryptedLogs: JSON.stringify(txEffect.unencryptedLogs.toJSON()),
                     });
                     const { _id, ...TxEffectWithoutId } = TxEffect.toObject();
-                    Transaction.findOneAndUpdate({hash: txEffect.hash().toString()}, TxEffectWithoutId, {upsert: true}).catch((error) => {
+                    Transaction.findOneAndUpdate({hash: txEffect.hash().toString('hex')}, TxEffectWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error updating transaction: ', error.message);
                     });
                 }
