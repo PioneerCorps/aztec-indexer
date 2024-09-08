@@ -86,8 +86,8 @@ async function main() {
                 const tsDate = new Date(block.header.globalVariables.timestamp.toNumber()*1000);
                 const L2Block = new Block({
                     hash: block.hash().toString(),
-                    number: tsDate,
-                    timestamp: new Date(block.header.globalVariables.timestamp.toNumber()*1000),
+                    number: block.header.globalVariables.blockNumber.toNumber(),
+                    timestamp: tsDate,
                     coinbaseAccount: block.header.globalVariables.coinbase,
                     totalFees: block.header.totalFees.toNumber(),
                     feeRecipient: block.header.globalVariables.feeRecipient,
