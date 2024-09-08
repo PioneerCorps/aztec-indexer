@@ -4,7 +4,8 @@ interface ITransaction extends Document {
     hash: string;
     blockNumber: number;
     index: number;
-    revertCode: number;
+    revertCode: string;
+    timestamp: Date;
     transactionFee: number;
     noteHashes: string;
     nullifiers: string;
@@ -18,7 +19,8 @@ const transactionSchema = new Schema<ITransaction>({
     hash: { type: String, required: true },
     index: { type: Number, required: true },
     blockNumber: { type: Number, required: true },
-    //revertCode: { type: Number, required: true },
+    revertCode: { type: String, required: true },
+    timestamp: { type: Date, required: true },
     transactionFee: { type: Number, required: true },
     noteHashes: { type: String, required: true },
     nullifiers: { type: String, required: true },

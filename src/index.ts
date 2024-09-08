@@ -5,7 +5,8 @@ import {
   waitForPXE,
   L2Block,
   DebugLogger,
-  Wallet
+  Wallet,
+  AztecAddress
 } from '@aztec/aztec.js';
 
 import {
@@ -24,11 +25,45 @@ async function main() {
     logger.info('Starting token example');
     // We create PXE client connected to the sandbox URL
     const pxe = createPXEClient(PXE_URL);
+    /*
+    const wallets = await getDeployedTestAccountsWallets(pxe);
+    console.log("wallets len: ", wallets.length);
+    for (let i = 0; i < wallets.length; i++) {
+        console.log("wallet: ", wallets[i].getAddress().toString());
+    }
+    const [initialWallets] = await getInitialTestAccountsWallets(pxe);
+    const contAddr = new AztecAddress(Buffer.from("0d739c4fea4de8f805d764e5cb564a92959cb4abeab3a158c650bfe3ebf3c9bc", "hex"))
+    const walletAddr = new AztecAddress(Buffer.from("0482bb3444d292704693af7cde8458100571f7261f1c2df91bee30f93124fb68", "hex"))
+    
+    console.log("contAddr: ", contAddr.toString());
+    console.log("wallet addr: ", wallets[0].getCompleteAddress().address.toString());
+    console.log("wallet addr: ", initialWallets.getCompleteAddress().address);
+    const inst = await pxe.getContractInstance(initialWallets.getCompleteAddress().address);
+    const contInst = await pxe.getContractInstance(contAddr);
+    console.log("contInst: ", contInst);
+    console.log("inst: ", inst);
+    console.log("cont id: ", inst?.contractClassId);
+    if (inst?.contractClassId) {
+        const contClass = await pxe.getContractClass(inst?.contractClassId);
+        console.log("wallet contClass: ", contClass);
+        contClass?.publicFunctions.forEach(async (func) => {
+            console.log("func: ", func);
+        });
+    }
+    if (contInst?.contractClassId) {
+        const contClass = await pxe.getContractClass(contInst?.contractClassId);
+        console.log("token contClass: ", contClass);
+        contClass?.publicFunctions.forEach(async (func) => {
+            console.log("func: ", func);
+        });
+    }*/
+    
+    
     // Wait for sandbox to be ready
     logger.debug('Waiting for PXE');
     await waitForPXE(pxe, logger);
-    const info = await pxe.getNodeInfo()
-    console.log(info)
+    //const info = await pxe.getNodeInfo()
+    //console.log(info)
     logger.info('PXE is ready');
     const initialSupply = 1_000_000n;
     connectDB();
@@ -38,6 +73,7 @@ async function main() {
     type BlockTxEffect = {
         txEffect: TxEffect[];
         blockNumber: number;
+        timestamp: Date;
     };
     let BlockTxEffects: BlockTxEffect[] = [];
     listenForNewBlocks2(blockNum, blocksArray,logger);
@@ -47,10 +83,11 @@ async function main() {
             const block = blocksArray.shift();
             if (block) {
                 console.log('Got Block: ', block.header.globalVariables.blockNumber.toNumber());
+                const tsDate = new Date(block.header.globalVariables.timestamp.toNumber()*1000);
                 const L2Block = new Block({
                     hash: block.hash().toString(),
-                    number: block.header.globalVariables.blockNumber.toNumber(),
-                    timestamp: new Date(),
+                    number: tsDate,
+                    timestamp: new Date(block.header.globalVariables.timestamp.toNumber()*1000),
                     coinbaseAccount: block.header.globalVariables.coinbase,
                     totalFees: block.header.totalFees.toNumber(),
                     feeRecipient: block.header.globalVariables.feeRecipient,
@@ -60,7 +97,7 @@ async function main() {
                 // Ensure _id is not in L2Block
                 const { _id, ...L2BlockWithoutId } = L2Block.toObject(); 
 
-                BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber.toNumber()});
+                BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber.toNumber(), timestamp: tsDate});
                 //console.log('TX Effects pushed. Length: ', txEffectsArray.length);
                 Block.findOneAndUpdate({number: block.header.globalVariables.blockNumber.toNumber()}, L2BlockWithoutId, {upsert: true}).catch((error) => {
                     console.error('Error upserting block: ', error.message);
@@ -79,7 +116,8 @@ async function main() {
                         hash: '0x'+txEffect.txHash.toString(),
                         index: i,
                         blockNumber: blockTxEffect.blockNumber,
-                        //revertCode: txEffect.revertCode,
+                        timestamp: blockTxEffect.timestamp,
+                        revertCode: txEffect.revertCode.getDescription(),
                         transactionFee: txEffect.transactionFee.toNumber(),
                         noteHashes: txEffect.noteHashes.toString(),
                         nullifiers: txEffect.nullifiers.toString(),
