@@ -11,12 +11,13 @@
       "allowSyntheticDefaultImports": true,
       "esModuleInterop": true,
       "downlevelIteration": true,
-      "inlineSourceMap": true,
       "declarationMap": true,
       "importHelpers": true,
       "resolveJsonModule": true,
       "composite": true,
-      "skipLibCheck": true
+      "skipLibCheck": true,
+      "allowArbitraryExtensions": true,
+      "sourceMap": true
     },
     "references": [],
     "include": ["src", "src/*.json"]

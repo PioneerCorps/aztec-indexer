@@ -10,6 +10,9 @@ interface IBlock extends Document {
     feeRecipient: string;
     txCount: number;
     paddingTxCount: number;
+    size: number;
+    feePerDaGas: number;
+    feePerL2Gas: number;
 }
 
 const blockSchema = new Schema<IBlock>({
@@ -21,7 +24,10 @@ const blockSchema = new Schema<IBlock>({
     totalFees: { type: Number, required: true },
     feeRecipient: { type: String, required: true },
     txCount: { type: Number, required: true },
-    paddingTxCount: { type: Number, required: true }
+    paddingTxCount: { type: Number, required: true },
+    size: { type: Number, required: true },
+    feePerDaGas: { type: Number, required: true },
+    feePerL2Gas: { type: Number, required: true },
 });
 
 const Block = model<IBlock>('Block', blockSchema);
