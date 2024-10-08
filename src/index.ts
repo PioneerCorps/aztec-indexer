@@ -205,7 +205,7 @@ async function main() {
                     Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
-                    const contractClass = await pxe.getContractClass(contract.contractClassId);
+                    /*const contractClass = await pxe.getContractClass(contract.contractClassId);
                     if(contractClass){
                         console.log("Contract Address", address.toString());
                         console.log("public functions");
@@ -223,7 +223,7 @@ async function main() {
                         artifact.functions.forEach(async (func) => {
                             console.log(func.name)
                         })
-                    }
+                    }*/
                 }
             }
         }
