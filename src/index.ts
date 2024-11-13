@@ -24,10 +24,6 @@ import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
 import Account from './models/account.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
-import { TokenContract } from '@aztec/noir-contracts.js/Token';
-import { getSchnorrAccount } from '@aztec/accounts/schnorr';
-import { json } from 'stream/consumers';
-import {SchnorrAccountContract,SchnorrAccountContractArtifact} from '@aztec/noir-contracts.js/SchnorrAccount'
 
 
 const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
