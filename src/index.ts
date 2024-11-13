@@ -8,6 +8,8 @@ import {
   Wallet,
   AccountWalletWithSecretKey,
   AztecAddress,
+  createAztecNodeClient,
+  FunctionArtifact,
 } from '@aztec/aztec.js';
 
 import {
@@ -33,6 +35,9 @@ const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
 async function main() {
     const logger = createDebugLogger('token');
     const pxe = createPXEClient(PXE_URL);
+    const jsonRpcClient = createAztecNodeClient(PXE_URL);
+
+    jsonRpcClient.getBlock
     //console.log(SchnorrAccountContract.toString());
     //console.log(SchnorrAccountContractArtifact);
     // Wait for sandbox to be ready
@@ -40,7 +45,7 @@ async function main() {
     await waitForPXE(pxe, logger);
     logger.info('PXE is ready');
     connectDB();
-    const blockNum = 0;
+    const blockNum = 1;
 
     let blocksArray: L2Block[] = [];
     type BlockTxEffect = {
@@ -189,8 +194,13 @@ async function main() {
                 if (contract) {
                     //console.log('Address ', address.toString(), ' is a contract');
                     let isContract = true;
-                    if(contract.deployer.toString() !== ZERO_ADDRESS) {
+                    if(contract.deployer.toString() === ZERO_ADDRESS) {
                         isContract = false;
+                    }
+                    let functions: FunctionArtifact[] = [];
+                    const artifact = await pxe.getContractArtifact(contract.contractClassId)
+                    if (artifact) {
+                        functions = artifact.functions;
                     }
 
                     const account = new Account({
@@ -200,12 +210,14 @@ async function main() {
                         contractClassID: contract.contractClassId.toString(),
                         isContract: true,
                         balance: BigInt(0).toString(),
+                        functions: functions,
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
                     Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
-                    /*const contractClass = await pxe.getContractClass(contract.contractClassId);
+                    /*
+                    const contractClass = await pxe.getContractClass(contract.contractClassId);
                     if(contractClass){
                         console.log("Contract Address", address.toString());
                         console.log("public functions");
@@ -216,14 +228,9 @@ async function main() {
                         contractClass.privateFunctions.forEach(async (privateFunction) => {
                             console.log(privateFunction.selector.toJSON());
                         });
-                    }
-
-                    const artifact = await pxe.getContractArtifact(contract.contractClassId)
-                    if (artifact) {
-                        artifact.functions.forEach(async (func) => {
-                            console.log(func.name)
-                        })
                     }*/
+
+
                 }
             }
         }
