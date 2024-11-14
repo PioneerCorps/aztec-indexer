@@ -8,7 +8,8 @@ interface IAccount extends Document {
     contractClassID: string;
     isContract: boolean;
     balance: string;
-    functions: FunctionAbi[]; // functions alanını güncelleyin
+    functions: FunctionAbi[];
+    byteCode: string;
 }
 
 const accountSchema = new Schema<IAccount>({
@@ -18,7 +19,8 @@ const accountSchema = new Schema<IAccount>({
     contractClassID: { type: String, required: true },
     isContract: { type: Boolean, required: true },
     balance: { type: String, required: true },
-    functions: { type: [Object], required: true } // functions alanını güncelleyin
+    functions: { type: [Object], required: true },
+    byteCode: { type: String, required: true },
 });
 
 const Account = model<IAccount>('Account', accountSchema);

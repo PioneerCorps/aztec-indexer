@@ -209,7 +209,11 @@ async function main() {
                             });
                         });
                     }
-
+                    let byteCode = '';
+                    const contClass = await pxe.getContractClass(contract.contractClassId);
+                    if (contClass) {
+                        byteCode = contClass.packedBytecode.toString();
+                    }
 
 
                     const account = new Account({
@@ -220,6 +224,7 @@ async function main() {
                         isContract: true,
                         balance: BigInt(0).toString(),
                         functions: functions,
+                        byteCode: byteCode,
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
                     Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
