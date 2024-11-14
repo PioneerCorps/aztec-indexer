@@ -24,6 +24,7 @@ import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
 import Account from './models/account.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
+import { FunctionAbi } from './interfaces/aztec.interfaces.js';
 
 
 const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
@@ -193,11 +194,23 @@ async function main() {
                     if(contract.deployer.toString() === ZERO_ADDRESS) {
                         isContract = false;
                     }
-                    let functions: FunctionArtifact[] = [];
+                    let functions: FunctionAbi[] = [];
                     const artifact = await pxe.getContractArtifact(contract.contractClassId)
                     if (artifact) {
-                        functions = artifact.functions;
+                        artifact.functions.forEach((functionAbi) => {
+                            functions.push({
+                                name: functionAbi.name,
+                                functionType: functionAbi.functionType,
+                                isInternal: functionAbi.isInternal,
+                                isStatic: functionAbi.isStatic,
+                                parameters: functionAbi.parameters,
+                                returnTypes: functionAbi.returnTypes,
+                                isInitializer: functionAbi.isInitializer,
+                            });
+                        });
                     }
+
+
 
                     const account = new Account({
                         address: address.toString(),

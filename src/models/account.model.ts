@@ -1,5 +1,5 @@
 import { Schema, model, Document, Model } from 'mongoose';
-import { FunctionArtifact } from '@aztec/aztec.js'; // FunctionAbi arayüzünü içe aktarın
+import { FunctionAbi } from '../interfaces/aztec.interfaces.js'; // FunctionAbi arayüzünü içe aktarın
 
 interface IAccount extends Document {
     address: string;
@@ -8,7 +8,7 @@ interface IAccount extends Document {
     contractClassID: string;
     isContract: boolean;
     balance: string;
-    functions: FunctionArtifact[]; // functions alanını güncelleyin
+    functions: FunctionAbi[]; // functions alanını güncelleyin
 }
 
 const accountSchema = new Schema<IAccount>({
