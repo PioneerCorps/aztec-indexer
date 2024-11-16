@@ -33,11 +33,6 @@ async function main() {
     const logger = createDebugLogger('token');
     const pxe = createPXEClient(PXE_URL);
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
-
-    jsonRpcClient.getBlock
-    //console.log(SchnorrAccountContract.toString());
-    //console.log(SchnorrAccountContractArtifact);
-    // Wait for sandbox to be ready
     logger.debug('Waiting for PXE');
     await waitForPXE(pxe, logger);
     logger.info('PXE is ready');
@@ -145,7 +140,6 @@ async function main() {
     setInterval(async () => {
         if(txHashes.length > 0) {
             const txHash = txHashes.shift();
-            //console.log('Tx Hash: ', txHash?.toString());
             const incomingNotes = await pxe.getIncomingNotes({txHash: txHash});
             incomingNotes.forEach(async (incomingNote) => {
                 const note = new Note({
@@ -189,14 +183,15 @@ async function main() {
             if(address) {
                 const contract = await pxe.getContractInstance(address);
                 if (contract) {
-                    //console.log('Address ', address.toString(), ' is a contract');
                     let isContract = true;
                     if(contract.deployer.toString() === ZERO_ADDRESS) {
                         isContract = false;
                     }
                     let functions: FunctionAbi[] = [];
+                    let name = '';
                     const artifact = await pxe.getContractArtifact(contract.contractClassId)
                     if (artifact) {
+                        name = artifact.name;
                         artifact.functions.forEach((functionAbi) => {
                             functions.push({
                                 name: functionAbi.name,
@@ -225,26 +220,12 @@ async function main() {
                         balance: BigInt(0).toString(),
                         functions: functions,
                         byteCode: byteCode,
+                        name: name,
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
                     Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
-                    /*
-                    const contractClass = await pxe.getContractClass(contract.contractClassId);
-                    if(contractClass){
-                        console.log("Contract Address", address.toString());
-                        console.log("public functions");
-                        contractClass.publicFunctions.forEach(async (publicFunction) => {
-                            console.log(publicFunction.selector.toJSON());
-                        });
-                        console.log("private functions");
-                        contractClass.privateFunctions.forEach(async (privateFunction) => {
-                            console.log(privateFunction.selector.toJSON());
-                        });
-                    }*/
-
-
                 }
             }
         }

@@ -10,6 +10,7 @@ interface IAccount extends Document {
     balance: string;
     functions: FunctionAbi[];
     byteCode: string;
+    name: string;
 }
 
 const accountSchema = new Schema<IAccount>({
@@ -21,6 +22,7 @@ const accountSchema = new Schema<IAccount>({
     balance: { type: String, required: true },
     functions: { type: [Object], required: true },
     byteCode: { type: String, required: true },
+    name: { type: String, required: true },
 });
 
 const Account = model<IAccount>('Account', accountSchema);
