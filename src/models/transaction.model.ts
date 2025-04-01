@@ -13,6 +13,7 @@ interface ITransaction extends Document {
     publicDataWrites: string;
     unencryptedLogsLength: number;
     uneencryptedLogs: string;
+    encryptedLogs?: string;
 }
 
 const transactionSchema = new Schema<ITransaction>({
@@ -27,7 +28,8 @@ const transactionSchema = new Schema<ITransaction>({
     l2ToL1Msgs: { type: String, required: true },
     publicDataWrites: { type: String, required: true },
     unencryptedLogsLength: { type: Number, required: true },
-    uneencryptedLogs: { type: String, required: true }
+    uneencryptedLogs: { type: String, required: true },
+    encryptedLogs: { type: String, required: false }
 });
 
 const Transaction = model<ITransaction>('Transaction', transactionSchema);
