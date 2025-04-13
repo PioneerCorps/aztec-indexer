@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect('mongodb://localhost:27017/yourDatabaseName', {
+    const conn = await mongoose.connect('mongodb://localhost:27017/aztec', {
         autoCreate: true,
         autoIndex: true,    
     });

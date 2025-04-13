@@ -23,7 +23,7 @@ import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
 import Account from './models/account.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
-import { FunctionAbi } from './interfaces/aztec.interfaces.js';
+import { FunctionAbi, FunctionType } from './interfaces/aztec.interfaces.js';
 
 
 const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
@@ -233,6 +233,7 @@ async function main() {
                     if(contractMetadata.contractInstance?.deployer.toString() === ZERO_ADDRESS) {
                         isContract = false;
                     }
+
                     
                     
                     const account = new Account({

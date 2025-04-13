@@ -32,7 +32,7 @@ export interface FunctionAbi {
 export enum FunctionType {
   PRIVATE = 'private',
   PUBLIC = 'public',
-  UNCONSTRAINED = 'unconstrained',
+  UTILITY = 'utility',
 }
 
 export interface ABIVariable {
