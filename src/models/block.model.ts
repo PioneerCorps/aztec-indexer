@@ -13,6 +13,8 @@ interface IBlock extends Document {
     size: number;
     feePerDaGas: number;
     feePerL2Gas: number;
+    startStateHash : string;
+    endStateHash : string;
 }
 
 const blockSchema = new Schema<IBlock>({
@@ -28,6 +30,8 @@ const blockSchema = new Schema<IBlock>({
     size: { type: Number, required: true },
     feePerDaGas: { type: Number, required: true },
     feePerL2Gas: { type: Number, required: true },
+    startStateHash: { type: String, required: true },
+    endStateHash: { type: String, required: true },
 });
 
 const Block = model<IBlock>('Block', blockSchema);

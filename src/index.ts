@@ -26,13 +26,17 @@ import { ZERO_ADDRESS } from './consts/consts.js';
 import { FunctionAbi, FunctionType } from './interfaces/aztec.interfaces.js';
 
 
-const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
+const { PXE_URL = 'http://localhost:8080' } = process.env;
+
 
 async function main() {
+    console.log('Starting Aztec Explorer');
     const logger = createLogger('token');
+    console.log(PXE_URL)
     const pxe = createPXEClient(PXE_URL);
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
     logger.debug('Waiting for PXE');
+    console.log('Waiting for PXE');
     await waitForPXE(pxe, logger);
     logger.debug('PXE is ready');
     connectDB();
@@ -48,13 +52,13 @@ async function main() {
     let txHashes: TxHash[] = [];
     let addresses: AztecAddress[] = [];
 
-    
-    const registeredAccounts = await pxe.getRegisteredAccounts();
-    registeredAccounts.forEach(async (account) => {
-        addresses.push(account.address);
-    });
-    const contracts = await pxe.getContracts();
-    contracts.forEach(async (contract) => {addresses.push(contract)});
+    //const registeredAccounts = await pxe.getRegisteredAccounts();
+    //registeredAccounts.forEach(async (account) => {
+    //    addresses.push(account.address);
+    //});
+    //const contracts = await pxe.getContracts();
+    //contracts.forEach(async (contract) => {addresses.push(contract)});
+    console.log(await pxe.getNodeInfo())
 
 
     //Block Listener
@@ -76,6 +80,8 @@ async function main() {
                     size: block.header.getSize(),
                     feePerDaGas: block.header.globalVariables.gasFees.feePerDaGas.toNumber(),
                     feePerL2Gas: block.header.globalVariables.gasFees.feePerL2Gas.toNumber(),
+                    endStateHash: block.getEndStateHash().toString('hex'),
+                    startStateHash: block.getStartStateHash().toString('hex'),
                 });
 
                 // Ensure _id is not in L2Block
@@ -204,7 +210,9 @@ async function main() {
                 }
                     */
                 const contractMetadata = await pxe.getContractMetadata(address);
-                if (contractMetadata) {
+                console.log("getting contract for address: ",address.toString())
+                if (contractMetadata.isContractInitialized || contractMetadata.isContractPubliclyDeployed) {
+                    console.log("got contract for address: ",address.toString())
                     let isContract = true;
                     let name = '';
                     let functions: FunctionAbi[] = [];
@@ -244,7 +252,7 @@ async function main() {
                         isContract: isContract,
                         balance: BigInt(0).toString(),
                         functions: functions,
-                        byteCode: byteCode,
+                        byteCode: byteCode.toString('hex'),
                         name: name,
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
