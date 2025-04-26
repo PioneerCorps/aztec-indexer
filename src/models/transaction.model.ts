@@ -3,6 +3,7 @@ import { Schema, model, Document, Model } from 'mongoose';
 interface ITransaction extends Document {
     hash: string;
     blockNumber: number;
+    blockHash: string;
     index: number;
     revertCode: string;
     timestamp: Date;
@@ -20,6 +21,7 @@ const transactionSchema = new Schema<ITransaction>({
     hash: { type: String, required: true },
     index: { type: Number, required: true },
     blockNumber: { type: Number, required: true },
+    blockHash: { type: String, required: true },
     revertCode: { type: String, required: true },
     timestamp: { type: Date, required: true },
     transactionFee: { type: Number, required: true },

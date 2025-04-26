@@ -21,12 +21,13 @@ import { connectDB } from './utils/db.js';
 import Transaction  from './models/transaction.model.js';
 import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
-import {Account,Account2} from './models/account.model.js';
+import {Account} from './models/account.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
 import { FunctionAbi, FunctionType } from './interfaces/aztec.interfaces.js';
+import { updateDailyStats } from './utils/stats.js';
 
 
-const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
+const { PXE_URL = 'http://138.201.52.21:8080' } = process.env;
 
 
 async function main() {
@@ -46,6 +47,7 @@ async function main() {
     type BlockTxEffect = {
         txEffect: TxEffect[];
         blockNumber: number;
+        blockHash: string;
         timestamp: Date;
     };
     let BlockTxEffects: BlockTxEffect[] = [];
@@ -87,7 +89,7 @@ async function main() {
                 // Ensure _id is not in L2Block
                 const { _id, ...L2BlockWithoutId } = L2Block.toObject(); 
 
-                BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber.toNumber(), timestamp: tsDate});
+                BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber.toNumber(), blockHash: (await block.hash()).toString(),timestamp: tsDate});
                 Block.findOneAndUpdate({number: block.header.globalVariables.blockNumber.toNumber()}, L2BlockWithoutId, {upsert: true}).catch((error) => {
                     console.error('Error upserting block: ', error.message);
                 });
@@ -129,9 +131,10 @@ async function main() {
                     });
 
                     const TxEffect = new Transaction({
-                        hash: '0x'+txEffect.txHash.toString(),
+                        hash: txEffect.txHash.toString(),
                         index: i,
                         blockNumber: blockTxEffect.blockNumber,
+                        blockHash: blockTxEffect.blockHash,
                         timestamp: blockTxEffect.timestamp,
                         revertCode: txEffect.revertCode.getDescription(),
                         transactionFee: txEffect.transactionFee.toNumber(),
@@ -268,6 +271,12 @@ async function main() {
             }
         }
     }, 300);
+
+    // Add daily stats update interval (runs every hour)
+    setInterval(async () => {
+        console.log('Updating daily statistics...');
+        await updateDailyStats();
+    }, 5000);
 }
 
 

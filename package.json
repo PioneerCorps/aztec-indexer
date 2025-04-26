@@ -8,7 +8,8 @@
     "build": "yarn clean && tsc -b",
     "build:dev": "tsc -b --watch",
     "clean": "rm -rf ./dest tsconfig.tsbuildinfo",
-    "start": "yarn build && DEBUG='token' node ./dest/index.js"
+    "start": "yarn build && DEBUG='token' node ./dest/index.js",
+    "index-history": "yarn build && node ./dest/scripts/indexHistory.js"
   },
   "dependencies": {
     "@aztec/accounts": "0.85.0-alpha-testnet.0",
