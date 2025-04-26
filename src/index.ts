@@ -184,7 +184,7 @@ async function main() {
                     
                     const functions: FunctionAbi[] = [];
                     const name = contractClass || '';
-                    const account = new Account2({
+                    const account = new Account({
                         address: address.toString(),
                         version: contract.version,
                         deployer: contract.deployer.toString(),
@@ -197,7 +197,7 @@ async function main() {
                         privateFunctionsRoot: privateFunctionsRoot
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
-                    Account2.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
+                    Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
                 }

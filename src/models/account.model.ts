@@ -41,4 +41,4 @@ const accountSchema2 = new Schema<IAccount>({
 });
 
 export const Account = model<IAccount>('Account', accountSchema);
-export const Account2 = model<IAccount>('Account', accountSchema2);
+export const Account2 = model<IAccount>('Account2', accountSchema2);

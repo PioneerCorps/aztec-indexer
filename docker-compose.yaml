@@ -16,17 +16,17 @@ services:
       - mongo
     environment:
       - DB_URL=mongodb://mongo:27017
-  
+      - PXE_URL=http://138.201.52.21:8080
+
   api:
-    image: indexer-api:latest
+    image: indexer-api:0.2.1
     container_name: api
     depends_on:
       - mongo
     ports:
       - "3000:3000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017
-
+      - DB_URL=mongodb://mongo:27017
 
 volumes:
   mongo-data:
