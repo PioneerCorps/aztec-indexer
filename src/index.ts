@@ -108,6 +108,18 @@ async function main() {
                         return log.toBuffer().toString('hex');
                     });
 
+                    const publicLogs = txEffect.publicLogs.map((log) => {
+                        return log.toBuffer().toString('hex');
+                    });
+
+                    txEffect.publicLogs.forEach((log) => {
+                        const chunkSize = 32;
+                        const logBuffer = log.toBuffer();
+                        for (let i = 0; i < logBuffer.length; i += chunkSize) {
+                            addresses.push(new AztecAddress(logBuffer.subarray(i,i+32)));
+                        }
+                    });
+
                     txEffect.privateLogs.forEach((log) => {
                         const chunkSize = 32;
                         const logBuffer = log.toBuffer();
@@ -128,7 +140,7 @@ async function main() {
                         l2ToL1Msgs: txEffect.l2ToL1Msgs.toString(),
                         publicDataWrites: txEffect.publicDataWrites.toString(),
                         unencryptedLogsLength: txEffect.publicLogs.length,
-                        uneencryptedLogs: txEffect.publicLogs.toString(),
+                        uneencryptedLogs: publicLogs.join(','),
                         encryptedLogs: privateLogs.join(','),
                     });
                     const { _id, ...TxEffectWithoutId } = TxEffect.toObject();
