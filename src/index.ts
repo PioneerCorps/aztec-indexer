@@ -21,12 +21,12 @@ import { connectDB } from './utils/db.js';
 import Transaction  from './models/transaction.model.js';
 import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
-import Account from './models/account.model.js';
+import {Account,Account2} from './models/account.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
 import { FunctionAbi, FunctionType } from './interfaces/aztec.interfaces.js';
 
 
-const { PXE_URL = 'http://localhost:8080' } = process.env;
+const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
 
 
 async function main() {
@@ -37,7 +37,7 @@ async function main() {
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
     logger.debug('Waiting for PXE');
     console.log('Waiting for PXE');
-    await waitForPXE(pxe, logger);
+    //await waitForPXE(pxe, logger);
     logger.debug('PXE is ready');
     connectDB();
     const blockNum = 1;
@@ -58,7 +58,7 @@ async function main() {
     //});
     //const contracts = await pxe.getContracts();
     //contracts.forEach(async (contract) => {addresses.push(contract)});
-    console.log(await pxe.getNodeInfo())
+    //console.log(await pxe.getNodeInfo())
 
 
     //Block Listener
@@ -144,7 +144,7 @@ async function main() {
 
 
     //note listener
-    setInterval(async () => {
+    /*setInterval(async () => {
         if(txHashes.length > 0) {
             const txHash = txHashes.shift();
             const notes = await pxe.getNotes({txHash: txHash});
@@ -163,36 +163,28 @@ async function main() {
                 });
             });
         }
-    },300);
+    },300);*/
 
     //Account Listener
     setInterval(async () => {
         if(addresses.length > 0) {
             const address = addresses.shift();
             if(address) {
-                /*
+                
                 const contract = await jsonRpcClient.getContract(address);
                 if (contract) {
                     const contractClass = await jsonRpcClient.getContractClass(contract.currentContractClassId);
                     let byteCode: Buffer = Buffer.from('');
-                    if (contractClass) {
-                        contractClass.publicFunctions.forEach((functionAbi) => {
-                            
-                        });
-                        contractClass.privateFunctions.forEach((functionAbi) => {
-                        });
-                        byteCode = contractClass.packedBytecode;
+                    let privateFunctionsRoot = ""
+                    if(contractClass){
+                        byteCode = contractClass.packedBytecode
+                        privateFunctionsRoot = contractClass.privateFunctionsRoot.toString()
                     }
-
                     let isContract = true;
-                    if(contract.deployer.toString() === ZERO_ADDRESS) {
-                        isContract = false;
-                    }
-                    
                     
                     const functions: FunctionAbi[] = [];
                     const name = contractClass || '';
-                    const account = new Account({
+                    const account = new Account2({
                         address: address.toString(),
                         version: contract.version,
                         deployer: contract.deployer.toString(),
@@ -202,13 +194,15 @@ async function main() {
                         functions: functions,
                         byteCode: byteCode,
                         name: name,
+                        privateFunctionsRoot: privateFunctionsRoot
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
-                    Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
+                    Account2.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
                 }
-                    */
+
+                /*
                 const contractMetadata = await pxe.getContractMetadata(address);
                 console.log("getting contract for address: ",address.toString())
                 if (contractMetadata.isContractInitialized || contractMetadata.isContractPubliclyDeployed) {
@@ -241,8 +235,6 @@ async function main() {
                     if(contractMetadata.contractInstance?.deployer.toString() === ZERO_ADDRESS) {
                         isContract = false;
                     }
-
-                    
                     
                     const account = new Account({
                         address: address.toString(),
@@ -254,12 +246,13 @@ async function main() {
                         functions: functions,
                         byteCode: byteCode.toString('hex'),
                         name: name,
+                        privateFunctionsRoot: "",
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
                     Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
-                }
+                }*/
             }
         }
     }, 300);
@@ -267,15 +260,15 @@ async function main() {
 
 
 async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: Logger) {
-    const pxe = createPXEClient(PXE_URL);
+    const jsonRpcClient = createAztecNodeClient(PXE_URL);
     let currentBlockNum = blockNum;
 
     async function fetchBlocks() {
         try {
-            const latestBlock = await pxe.getBlockNumber();
+            const latestBlock = await jsonRpcClient.getBlockNumber();
             logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum));
             while (currentBlockNum <= latestBlock) {
-                const block = await pxe.getBlock(currentBlockNum);
+                const block = await jsonRpcClient.getBlock(currentBlockNum);
                 if (block) {
                     blocks.push(block);
                     currentBlockNum++;

@@ -11,6 +11,7 @@ interface IAccount extends Document {
     functions: FunctionAbi[];
     byteCode: string;
     name: string;
+    privateFunctionsRoot: string;
 }
 
 const accountSchema = new Schema<IAccount>({
@@ -23,8 +24,21 @@ const accountSchema = new Schema<IAccount>({
     functions: { type: [Object], required: true },
     byteCode: { type: String, required: true },
     name: { type: String, required: true },
+    privateFunctionsRoot: { type: String, required: true },
 });
 
-const Account = model<IAccount>('Account', accountSchema);
+const accountSchema2 = new Schema<IAccount>({
+    address: { type: String, required: true },
+    version: { type: Number, required: true },
+    deployer: { type: String, required: true },
+    contractClassID: { type: String, required: true },
+    isContract: { type: Boolean, required: true },
+    balance: { type: String, required: true },
+    functions: { type: [Object], required: true },
+    byteCode: { type: String, required: true },
+    name: { type: String, required: true },
+    privateFunctionsRoot: { type: String, required: true },
+});
 
-export default Account;
+export const Account = model<IAccount>('Account', accountSchema);
+export const Account2 = model<IAccount>('Account', accountSchema2);
