@@ -21,10 +21,12 @@ import { connectDB } from './utils/db.js';
 import Transaction  from './models/transaction.model.js';
 import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
-import {Account} from './models/account.model.js';
+import { Account } from './models/account.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
 import { FunctionAbi, FunctionType } from './interfaces/aztec.interfaces.js';
 import { updateDailyStats } from './utils/stats.js';
+import { BlockChecker } from './utils/blockChecker.js';
+import Reorg from './models/reorg.model.js';
 
 
 const { PXE_URL = 'http://138.201.52.21:8080' } = process.env;
@@ -41,6 +43,17 @@ async function main() {
     //await waitForPXE(pxe, logger);
     logger.debug('PXE is ready');
     connectDB();
+    
+    // Initialize the block checker for finality and reorg detection
+    const blockChecker = new BlockChecker(PXE_URL, Reorg);
+    await blockChecker.initialize();
+    
+    // Schedule regular checks for block finality updates
+    setInterval(async () => {
+        console.log('Running scheduled check for block finality status...');
+        await blockChecker.checkAndUpdateStatus();
+    }, 30000); // Check every minute
+    
     const blockNum = 1;
 
     let blocksArray: L2Block[] = [];
@@ -96,7 +109,6 @@ async function main() {
             }
         }
     }, 300);
-
 
     //TX Listener
     setInterval(async () => {
@@ -276,29 +288,65 @@ async function main() {
     setInterval(async () => {
         console.log('Updating daily statistics...');
         await updateDailyStats();
-    }, 5000);
+    }, 3600000); // Every hour (3600000 ms)
 }
 
 
 async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: Logger) {
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
     let currentBlockNum = blockNum;
+    const BATCH_SIZE = 50; // Number of blocks to fetch at once when behind
 
     async function fetchBlocks() {
         try {
             const latestBlock = await jsonRpcClient.getBlockNumber();
-            logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum));
-            while (currentBlockNum <= latestBlock) {
-                const block = await jsonRpcClient.getBlock(currentBlockNum);
-                if (block) {
-                    blocks.push(block);
-                    currentBlockNum++;
+            const blocksBehind = latestBlock - currentBlockNum;
+            
+            logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum, ' Behind by: ', blocksBehind));
+            
+            // If we're significantly behind, use batch fetching with getBlocks
+            if (blocksBehind > BATCH_SIZE) {
+                console.log(`Syncing in batch mode - ${blocksBehind} blocks behind`);
+                
+                // Calculate how many blocks to fetch (up to BATCH_SIZE)
+                const batchSize = Math.min(BATCH_SIZE, blocksBehind);
+                
+                // Fetch multiple blocks at once
+                const fetchedBlocks = await jsonRpcClient.getBlocks(currentBlockNum, batchSize);
+                
+                if (fetchedBlocks && fetchedBlocks.length > 0) {
+                    // Add all fetched blocks to our queue
+                    fetchedBlocks.forEach(block => blocks.push(block));
+                    
+                    // Update our position to after the last block received
+                    if (fetchedBlocks.length > 0) {
+                        const lastBlock = fetchedBlocks[fetchedBlocks.length - 1];
+                        const lastBlockNum = lastBlock.header.globalVariables.blockNumber.toNumber();
+                        currentBlockNum = lastBlockNum + 1;
+                        console.log(`Batch sync progress: Fetched blocks ${fetchedBlocks[0].header.globalVariables.blockNumber.toNumber()}-${lastBlockNum}`);
+                    }
+                }
+            } 
+            // Otherwise use individual block fetching for normal operation
+            else {
+                while (currentBlockNum <= latestBlock) {
+                    const block = await jsonRpcClient.getBlock(currentBlockNum);
+                    if (block) {
+                        blocks.push(block);
+                        currentBlockNum++;
+                    } else {
+                        // Break if a block isn't found to avoid getting stuck
+                        console.log(`Block ${currentBlockNum} not found, skipping...`);
+                        currentBlockNum++;
+                    }
                 }
             }
         } catch (error) {
-            logger.info(format('Error getting block: ', error));
+            logger.info(format('Error getting blocks: ', error));
         } finally {
-            setTimeout(fetchBlocks, 100);
+            // Adjust polling interval based on how far behind we are
+            const pollInterval = blocks.length > 100 ? 10 : 100; // Poll faster if we have a backlog
+            setTimeout(fetchBlocks, pollInterval);
         }
     }
 

@@ -1,4 +1,5 @@
 import { Schema, model, Document,Model } from 'mongoose';
+import { FinalityStatus } from '../utils/blockChecker.js';
 
 interface IBlock extends Document {
     hash: string;
@@ -15,6 +16,7 @@ interface IBlock extends Document {
     feePerL2Gas: number;
     startStateHash : string;
     endStateHash : string;
+    finalityStatus?: string;
 }
 
 const blockSchema = new Schema<IBlock>({
@@ -32,8 +34,20 @@ const blockSchema = new Schema<IBlock>({
     feePerL2Gas: { type: Number, required: true },
     startStateHash: { type: String, required: true },
     endStateHash: { type: String, required: true },
+    finalityStatus: { 
+        type: String, 
+        enum: Object.values(FinalityStatus),
+        default: FinalityStatus.PRECONFIRMED 
+    }
 });
+
+// Add indexes for common queries
+blockSchema.index({ number: 1 }, { unique: true });
+blockSchema.index({ hash: 1 }, { unique: true });
+blockSchema.index({ timestamp: -1 });
+blockSchema.index({ finalityStatus: 1 });
 
 const Block = model<IBlock>('Block', blockSchema);
 
 export default Block;
+export { IBlock };

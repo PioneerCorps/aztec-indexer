@@ -9,7 +9,9 @@
     "build:dev": "tsc -b --watch",
     "clean": "rm -rf ./dest tsconfig.tsbuildinfo",
     "start": "yarn build && DEBUG='token' node ./dest/index.js",
-    "index-history": "yarn build && node ./dest/scripts/indexHistory.js"
+    "index-history": "yarn build && node ./dest/scripts/indexHistory.js",
+    "check-blocks": "yarn build && node ./dest/scripts/compareBlockCount.js",
+    "fetch-missing-blocks": "yarn build && node ./dest/scripts/fetchMissingBlocks.js"
   },
   "dependencies": {
     "@aztec/accounts": "0.85.0-alpha-testnet.0",

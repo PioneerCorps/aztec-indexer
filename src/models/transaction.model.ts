@@ -1,4 +1,5 @@
 import { Schema, model, Document, Model } from 'mongoose';
+import { FinalityStatus } from '../utils/blockChecker.js';
 
 interface ITransaction extends Document {
     hash: string;
@@ -15,6 +16,7 @@ interface ITransaction extends Document {
     unencryptedLogsLength: number;
     uneencryptedLogs: string;
     encryptedLogs?: string;
+    finalityStatus?: string;
 }
 
 const transactionSchema = new Schema<ITransaction>({
@@ -31,9 +33,21 @@ const transactionSchema = new Schema<ITransaction>({
     publicDataWrites: { type: String, required: true },
     unencryptedLogsLength: { type: Number, required: true },
     uneencryptedLogs: { type: String, required: true },
-    encryptedLogs: { type: String, required: false }
+    encryptedLogs: { type: String, required: false },
+    finalityStatus: { 
+        type: String, 
+        enum: Object.values(FinalityStatus),
+        default: FinalityStatus.PRECONFIRMED 
+    }
 });
+
+// Add indexes for common queries
+transactionSchema.index({ hash: 1 }, { unique: true });
+transactionSchema.index({ blockNumber: 1 });
+transactionSchema.index({ timestamp: -1 });
+transactionSchema.index({ finalityStatus: 1 });
 
 const Transaction = model<ITransaction>('Transaction', transactionSchema);
 
 export default Transaction;
+export { ITransaction };
