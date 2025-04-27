@@ -78,11 +78,20 @@ async function main() {
 
     //Block Listener
     listenForNewBlocks2(blockNum, blocksArray,logger);
-    setInterval(async () => {
-        if(blocksArray.length > 0) {
+    
+    // Adaptive block processing to handle backlog more efficiently
+    const processBlocksToDb = async () => {
+        // Process more blocks at once when backlog is larger
+        const batchSize = blocksArray.length > 50 ? 10 : 1;
+        let processedCount = 0;
+        
+        // Process a batch of blocks
+        while (processedCount < batchSize && blocksArray.length > 0) {
             const block = blocksArray.shift();
             if (block) {
-                console.log('Got Block: ', block.header.globalVariables.blockNumber.toNumber());
+                console.log('Got Block: ', block.header.globalVariables.blockNumber.toNumber(), 
+                          `(Queue: ${blocksArray.length} remaining)`);
+                
                 const tsDate = new Date(block.header.globalVariables.timestamp.toNumber()*1000);
                 const L2Block = new Block({
                     hash: (await block.hash()).toString(),
@@ -103,20 +112,42 @@ async function main() {
                 const { _id, ...L2BlockWithoutId } = L2Block.toObject(); 
 
                 BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber.toNumber(), blockHash: (await block.hash()).toString(),timestamp: tsDate});
-                Block.findOneAndUpdate({number: block.header.globalVariables.blockNumber.toNumber()}, L2BlockWithoutId, {upsert: true}).catch((error) => {
-                    console.error('Error upserting block: ', error.message);
-                });
+                
+                try {
+                    await Block.findOneAndUpdate(
+                        {number: block.header.globalVariables.blockNumber.toNumber()}, 
+                        L2BlockWithoutId, 
+                        {upsert: true}
+                    );
+                    processedCount++;
+                } catch (e) {
+                    console.error('Error upserting block: ', e instanceof Error ? e.message : String(e));
+                }
             }
         }
-    }, 300);
+        
+        // Set polling interval based on backlog size
+        const nextDelay = blocksArray.length > 20 ? 10 : 1000; // Poll faster with larger backlog
+        setTimeout(processBlocksToDb, nextDelay);
+    };
+    
+    // Start the adaptive processing
+    processBlocksToDb();
 
     //TX Listener
-    setInterval(async () => {
-        if(BlockTxEffects.length > 0) {
+    const processTxEffects = async () => {
+        // Process more transaction effects at once when backlog is larger
+        const batchSize = BlockTxEffects.length > 20 ? 5 : 1;
+        let processedCount = 0;
+        
+        // Process a batch of transaction effects
+        while (processedCount < batchSize && BlockTxEffects.length > 0) {
             const blockTxEffect = BlockTxEffects.shift();
             if (blockTxEffect) {
-                for (let i = 0; i < blockTxEffect.txEffect.length; i++) {
-                    const txEffect = blockTxEffect.txEffect[i];
+                console.log(`Processing ${blockTxEffect.txEffect.length} transactions for block ${blockTxEffect.blockNumber} (Queue: ${BlockTxEffects.length} remaining)`);
+                
+                // Use Promise.all to process transactions in parallel for this block
+                const txPromises = blockTxEffect.txEffect.map(async (txEffect, i) => {
                     const noteHashes = txEffect.noteHashes;
                     const privateLogs = txEffect.privateLogs.map((log) => {
                         return log.toBuffer().toString('hex');
@@ -161,14 +192,33 @@ async function main() {
                     const { _id, ...TxEffectWithoutId } = TxEffect.toObject();
                     txHashes.push(txEffect.txHash);
                     
-                    Transaction.findOneAndUpdate({hash: '0x'+txEffect.txHash.toString()}, TxEffectWithoutId, {upsert: true}).catch((error) => {
-                        console.error('Error updating transaction: ', error.message);
-                    });
+                    try {
+                        await Transaction.findOneAndUpdate(
+                            {hash: txEffect.txHash.toString()}, 
+                            TxEffectWithoutId, 
+                            {upsert: true}
+                        );
+                    } catch (e) {
+                        console.error('Error updating transaction: ', e instanceof Error ? e.message : String(e));
+                    }
+                });
+                
+                try {
+                    await Promise.all(txPromises);
+                    processedCount++;
+                } catch (e) {
+                    console.error('Error batch processing transactions: ', e instanceof Error ? e.message : String(e));
                 }
             }
         }
-    }, 300);
-
+        
+        // Set polling interval based on backlog size
+        const nextDelay = BlockTxEffects.length > 10 ? 10 : 1000; // Poll faster with larger backlog
+        setTimeout(processTxEffects, nextDelay);
+    };
+    
+    // Start the adaptive processing
+    processTxEffects();
 
     //note listener
     /*setInterval(async () => {
@@ -298,9 +348,10 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
     const BATCH_SIZE = 50; // Number of blocks to fetch at once when behind
 
     async function fetchBlocks() {
+        let blocksBehind = 0;
         try {
             const latestBlock = await jsonRpcClient.getBlockNumber();
-            const blocksBehind = latestBlock - currentBlockNum;
+            blocksBehind = latestBlock - currentBlockNum;
             
             logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum, ' Behind by: ', blocksBehind));
             
@@ -345,7 +396,7 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
             logger.info(format('Error getting blocks: ', error));
         } finally {
             // Adjust polling interval based on how far behind we are
-            const pollInterval = blocks.length > 100 ? 10 : 100; // Poll faster if we have a backlog
+            const pollInterval = blocksBehind > 100 ? 10 : 1000; // Poll faster if we're far behind
             setTimeout(fetchBlocks, pollInterval);
         }
     }
