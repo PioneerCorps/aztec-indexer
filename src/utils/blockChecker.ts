@@ -2,6 +2,7 @@ import { createAztecNodeClient } from '@aztec/aztec.js';
 import Block, { IBlock } from '../models/block.model.js';
 import Transaction, { ITransaction } from '../models/transaction.model.js';
 import { connectDB } from './db.js';
+import { FinalityStatus } from './finality.js';
 
 // Define types for chain tip information
 interface ChainTip {
@@ -13,14 +14,6 @@ interface L2Tips {
   latest: ChainTip;
   proven: ChainTip;
   finalized: ChainTip;
-}
-
-// Define finality statuses for blocks and transactions
-export enum FinalityStatus {
-  PRECONFIRMED = 'preconfirmed',
-  PROVEN = 'proven',
-  FINALIZED = 'finalized',
-  REORGED = 'reorged'
 }
 
 /**

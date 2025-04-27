@@ -1,5 +1,5 @@
 import { Schema, model, Document, Model } from 'mongoose';
-import { FinalityStatus } from '../utils/blockChecker.js';
+import { FinalityStatus } from '../utils/finality.js';
 
 interface ITransaction extends Document {
     hash: string;

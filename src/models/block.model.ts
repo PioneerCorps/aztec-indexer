@@ -1,5 +1,5 @@
 import { Schema, model, Document,Model } from 'mongoose';
-import { FinalityStatus } from '../utils/blockChecker.js';
+import { FinalityStatus } from '../utils/finality.js';
 
 interface IBlock extends Document {
     hash: string;
@@ -14,8 +14,8 @@ interface IBlock extends Document {
     size: number;
     feePerDaGas: number;
     feePerL2Gas: number;
-    startStateHash : string;
-    endStateHash : string;
+    startStateHash: string;
+    endStateHash: string;
     finalityStatus?: string;
 }
 
