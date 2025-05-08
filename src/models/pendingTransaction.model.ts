@@ -3,7 +3,7 @@ import { Schema, model, Document } from 'mongoose';
 // Tx sınıfındaki alanlara karşılık gelen arayüz
 // Gerçek Tx yapısı daha karmaşık olabilir, bu temel bir temsildir.
 interface IPendingTransaction extends Document {
-  txHash: string;
+  hash: string;
   data: string; // PrivateKernelTailCircuitPublicInputs'ın serileştirilmiş hali (JSON string veya Buffer hex)
   clientIvcProof: string; // ClientIvcProof'un serileştirilmiş hali
   contractClassLogs: string[]; // ContractClassLog dizisinin serileştirilmiş hali
@@ -12,7 +12,7 @@ interface IPendingTransaction extends Document {
 }
 
 const PendingTransactionSchema = new Schema<IPendingTransaction>({
-  txHash: { type: String, required: true, unique: true, index: true },
+  hash: { type: String, required: true, unique: true, index: true },
   data: { type: String, required: true },
   clientIvcProof: { type: String, required: true },
   contractClassLogs: [{ type: String }],

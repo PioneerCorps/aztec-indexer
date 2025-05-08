@@ -476,7 +476,7 @@ async function main() {
                 try {
                     const txHash = (await tx.getTxHash()).toString();
                     newPendingTxDocs.push({
-                        txHash: txHash,
+                        hash: txHash,
                         data: tx.data.toBuffer().toString('hex'), // Serialize to hex string
                         clientIvcProof: tx.clientIvcProof.toBuffer().toString('hex'), // Serialize to hex string
                         contractClassLogs: tx.contractClassLogs.map(log => log.toBuffer().toString('hex')),
