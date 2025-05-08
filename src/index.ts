@@ -216,14 +216,24 @@ async function main() {
                         }
                     });*/
                     txEffect.privateLogs.forEach((log) => {
-                        if(log.toBuffer().toString('hex').includes("85864497636cf755ae7bde03f267ce01a520981c21c3682aaf82a631")) {
-                            addresses.push({
-                                address: new AztecAddress(log.toBuffer().subarray(32,64)),
-                                blockNumber: blockTxEffect.blockNumber,
-                                blockHash: blockTxEffect.blockHash,
-                                txHash: txEffect.txHash.toString(),
-                                timestamp: blockTxEffect.timestamp,
-                            });
+                        const logHexString = log.toBuffer().toString('hex');
+                        const searchValueHex = "2ec28b91a5f838506d6042915005ff55cf7a0a5f889a83b11faed33a31b486f2";
+                        const startIndexInHex = logHexString.indexOf(searchValueHex);
+
+                        if (startIndexInHex !== -1) {
+                            const valueEndIndexInHex = startIndexInHex + searchValueHex.length;
+                            // Sonraki 32 bayt, hex'te 64 karakter anlamına gelir.
+                            if (logHexString.length >= valueEndIndexInHex + 64) {
+                                const addressHexString = logHexString.substring(valueEndIndexInHex, valueEndIndexInHex + 64);
+                                const addressBytes = Buffer.from(addressHexString, 'hex');
+                                addresses.push({
+                                    address: new AztecAddress(addressBytes),
+                                    blockNumber: blockTxEffect.blockNumber,
+                                    blockHash: blockTxEffect.blockHash,
+                                    txHash: txEffect.txHash.toString(),
+                                    timestamp: blockTxEffect.timestamp,
+                                });
+                            }
                         }
                     })
 
