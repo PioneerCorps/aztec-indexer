@@ -12,6 +12,11 @@ interface IAccount extends Document {
     byteCode: string;
     name: string;
     privateFunctionsRoot: string;
+    blockNumber: number;
+    blockHash: string;
+    txHash: string;
+    creationTimestamp: Date;
+    
 }
 
 const accountSchema = new Schema<IAccount>({
@@ -25,6 +30,10 @@ const accountSchema = new Schema<IAccount>({
     byteCode: { type: String, required: true },
     name: { type: String, required: true },
     privateFunctionsRoot: { type: String, required: true },
+    blockNumber: { type: Number, required: true },
+    blockHash: { type: String, required: true },
+    txHash: { type: String, required: true },
+    creationTimestamp: { type: Date, default: Date.now },
 });
 
 export const Account = model<IAccount>('Account', accountSchema);

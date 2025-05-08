@@ -17,6 +17,8 @@ interface ITransaction extends Document {
     uneencryptedLogs: string;
     encryptedLogs?: string;
     finalityStatus?: string;
+    contractAddress?: string;
+    contractLogs?: string;
 }
 
 const transactionSchema = new Schema<ITransaction>({
@@ -38,7 +40,9 @@ const transactionSchema = new Schema<ITransaction>({
         type: String, 
         enum: Object.values(FinalityStatus),
         default: FinalityStatus.PRECONFIRMED 
-    }
+    },
+    contractAddress: { type: String, required: false },
+    contractLogs: { type: String, required: false },
 });
 
 // Add indexes for common queries

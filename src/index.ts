@@ -11,6 +11,7 @@ import {
   FunctionArtifact,
   Logger,
   loadContractArtifact,
+  Fr,
 } from '@aztec/aztec.js';
 import {
     TxEffect,
@@ -22,12 +23,32 @@ import Transaction  from './models/transaction.model.js';
 import Block  from './models/block.model.js';
 import Note from './models/note.model.js';
 import { Account } from './models/account.model.js';
+import PendingTransaction from './models/pendingTransaction.model.js';
+import { ContractClass } from './models/contractClass.model.js';
 import { ZERO_ADDRESS } from './consts/consts.js';
 import { FunctionAbi, FunctionType } from './interfaces/aztec.interfaces.js';
 import { updateDailyStats } from './utils/stats.js';
 import { BlockChecker } from './utils/blockChecker.js';
 import Reorg from './models/reorg.model.js';
 
+async function retryAsync<T>(
+  fn: () => Promise<T>,
+  retries: number = 3,
+  delay: number = 1000,
+  attempt: number = 1
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (attempt > retries) {
+      console.error(`[Retry Failed] After ${retries} attempts: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+    console.warn(`[Retry Attempt ${attempt}/${retries}] Error: ${error instanceof Error ? error.message : String(error)}. Retrying in ${delay / 1000}s...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryAsync(fn, retries, delay, attempt + 1);
+  }
+}
 
 const { PXE_URL = 'http://138.201.52.21:8080' } = process.env;
 
@@ -37,6 +58,7 @@ async function main() {
     const logger = createLogger('token');
     console.log(PXE_URL)
     const pxe = createPXEClient(PXE_URL);
+    pxe.getTxReceipt
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
     logger.debug('Waiting for PXE');
     console.log('Waiting for PXE');
@@ -53,7 +75,7 @@ async function main() {
         console.log('Running scheduled check for block finality status...');
         await blockChecker.checkAndUpdateStatus();
     }, 30000); // Check every minute
-    
+
     const blockNum = 1;
 
     let blocksArray: L2Block[] = [];
@@ -63,9 +85,27 @@ async function main() {
         blockHash: string;
         timestamp: Date;
     };
+
+    type ContractClassWithBlockInfo = {
+        id: Fr;
+        blockNumber: number;
+        blockHash: string;
+        txHash: string;
+        timestamp: Date;
+    }
+
+    type AddressWithBlockInfo = {
+        address: AztecAddress;
+        blockNumber: number;
+        blockHash: string;
+        txHash: string;
+        timestamp: Date;
+    }
+
     let BlockTxEffects: BlockTxEffect[] = [];
     let txHashes: TxHash[] = [];
-    let addresses: AztecAddress[] = [];
+    let addresses: AddressWithBlockInfo[] = [];
+    let contractClassesWithBlockInfo: ContractClassWithBlockInfo[] = [];
 
     //const registeredAccounts = await pxe.getRegisteredAccounts();
     //registeredAccounts.forEach(async (account) => {
@@ -78,6 +118,7 @@ async function main() {
 
     //Block Listener
     listenForNewBlocks2(blockNum, blocksArray,logger);
+    //listenForNewBlocksPXE(blockNum,blocksArray,logger);
     
     // Adaptive block processing to handle backlog more efficiently
     const processBlocksToDb = async () => {
@@ -101,7 +142,7 @@ async function main() {
                     totalFees: block.header.totalFees.toNumber(),
                     feeRecipient: block.header.globalVariables.feeRecipient,
                     txCount: block.body.txEffects.length,
-                    size: block.header.getSize(),
+                    size: block.body.toBuffer().length,
                     feePerDaGas: block.header.globalVariables.gasFees.feePerDaGas.toNumber(),
                     feePerL2Gas: block.header.globalVariables.gasFees.feePerL2Gas.toNumber(),
                     endStateHash: block.getEndStateHash().toString('hex'),
@@ -157,7 +198,7 @@ async function main() {
                         return log.toBuffer().toString('hex');
                     });
 
-                    txEffect.publicLogs.forEach((log) => {
+                    /*txEffect.publicLogs.forEach((log) => {
                         const chunkSize = 32;
                         const logBuffer = log.toBuffer();
                         for (let i = 0; i < logBuffer.length; i += chunkSize) {
@@ -165,12 +206,48 @@ async function main() {
                         }
                     });
 
+
+
                     txEffect.privateLogs.forEach((log) => {
                         const chunkSize = 32;
                         const logBuffer = log.toBuffer();
                         for (let i = 0; i < logBuffer.length; i += chunkSize) {
                             addresses.push(new AztecAddress(logBuffer.subarray(i,i+32)));
                         }
+                    });*/
+
+
+                    txEffect.privateLogs.forEach((log) => {
+                        if(log.toBuffer().toString('hex').includes("2ec28b91a5f838506d6042915005ff55cf7a0a5f889a83b11faed33a31b486f2")) {
+                            addresses.push({
+                                address: new AztecAddress(log.toBuffer().subarray(32,64)),
+                                blockNumber: blockTxEffect.blockNumber,
+                                blockHash: blockTxEffect.blockHash,
+                                txHash: txEffect.txHash.toString(),
+                                timestamp: blockTxEffect.timestamp,
+                            });
+                        }
+                    })
+
+                    var contractAddress: String[] = [];
+                    var contractAddressLogs: String[] = [];
+
+                    txEffect.contractClassLogs.forEach((log) => {
+                        contractAddress.push(log.contractAddress.toBuffer().toString('hex'));
+                        if(log.contractAddress.toBuffer().toString('hex') === "0000000000000000000000000000000000000000000000000000000000000003") {
+                            contractClassesWithBlockInfo.push({
+                                id: log.fields[1],
+                                blockNumber: blockTxEffect.blockNumber,
+                                blockHash: blockTxEffect.blockHash,
+                                txHash: txEffect.txHash.toString(),
+                                timestamp: blockTxEffect.timestamp,
+                            })
+                        }
+                        var contractAddressLog: String[] = []; 
+                        log.fields.forEach((field) => {
+                            contractAddressLog.push(field.toBuffer().toString('hex'));
+                        })
+                        contractAddressLogs.push(contractAddressLog.join(','));                        
                     });
 
                     const TxEffect = new Transaction({
@@ -188,6 +265,8 @@ async function main() {
                         unencryptedLogsLength: txEffect.publicLogs.length,
                         uneencryptedLogs: publicLogs.join(','),
                         encryptedLogs: privateLogs.join(','),
+                        contractAddress: contractAddress.join(','),
+                        contractLogs: contractAddressLogs.join(','),
                     });
                     const { _id, ...TxEffectWithoutId } = TxEffect.toObject();
                     txHashes.push(txEffect.txHash);
@@ -242,19 +321,54 @@ async function main() {
         }
     },300);*/
 
+    setInterval(async () => {
+        if(contractClassesWithBlockInfo.length > 0) {
+            const contractClassWithBlockInfo = contractClassesWithBlockInfo.shift();
+            if(contractClassWithBlockInfo) {
+                const contractClass = await retryAsync(() => jsonRpcClient.getContractClass(contractClassWithBlockInfo.id));
+                const functions: FunctionAbi[] = [];
+                if (contractClass){
+                    const contractClassDoc = new ContractClass({
+                        id: contractClassWithBlockInfo.id.toString(),
+                        artifactHash: contractClass.artifactHash.toString(),
+                        privateFunctionsRoot: contractClass.privateFunctionsRoot.toString(),
+                        packedBytecode: contractClass.packedBytecode,
+                        version: contractClass.version,
+                        blockHash: contractClassWithBlockInfo.blockHash,
+                        blockNumber: contractClassWithBlockInfo.blockNumber,
+                        txHash: contractClassWithBlockInfo.txHash,
+                        publicFunctions: functions,
+                        creationTimestamp: contractClassWithBlockInfo.timestamp,
+                    });
+
+                    const { _id, ...contractClassWithoutId } = contractClassDoc.toObject();
+                    try {
+                        await ContractClass.findOneAndUpdate(
+                            {id: contractClassWithBlockInfo.id.toString(), blockHash: contractClassWithBlockInfo.blockHash, blockNumber: contractClassWithBlockInfo.blockNumber},
+                            contractClassWithoutId,
+                            {upsert: true}
+                        )
+                    } catch (e) {
+                        console.error('Error upserting contract class: ', e instanceof Error ? e.message : String(e));
+                    }
+                }
+            }
+        }
+    }, 1000);
+
     //Account Listener
     setInterval(async () => {
         if(addresses.length > 0) {
-            const address = addresses.shift();
-            if(address) {
+            const addressWithBlockInfo = addresses.shift();
+            if(addressWithBlockInfo) {
                 
-                const contract = await jsonRpcClient.getContract(address);
+                const contract = await retryAsync(() => jsonRpcClient.getContract(addressWithBlockInfo.address));
                 if (contract) {
-                    const contractClass = await jsonRpcClient.getContractClass(contract.currentContractClassId);
+                    const contractClass = await retryAsync(() => jsonRpcClient.getContractClass(contract.currentContractClassId));
                     let byteCode: Buffer = Buffer.from('');
                     let privateFunctionsRoot = ""
                     if(contractClass){
-                        byteCode = contractClass.packedBytecode
+                        byteCode = contractClass.packedBytecode.toString('hex');
                         privateFunctionsRoot = contractClass.privateFunctionsRoot.toString()
                     }
                     let isContract = true;
@@ -262,7 +376,7 @@ async function main() {
                     const functions: FunctionAbi[] = [];
                     const name = contractClass || '';
                     const account = new Account({
-                        address: address.toString(),
+                        address: addressWithBlockInfo.address.toString(),
                         version: contract.version,
                         deployer: contract.deployer.toString(),
                         contractClassID: contract.currentContractClassId.toString(),
@@ -271,16 +385,20 @@ async function main() {
                         functions: functions,
                         byteCode: byteCode,
                         name: name,
-                        privateFunctionsRoot: privateFunctionsRoot
+                        privateFunctionsRoot: privateFunctionsRoot,
+                        blockNumber: addressWithBlockInfo.blockNumber,
+                        blockHash: addressWithBlockInfo.blockHash,
+                        txHash: addressWithBlockInfo.txHash,
+                        creationTimestamp: addressWithBlockInfo.timestamp,
                     });
                     const { _id, ...accountWithoutId } = account.toObject();
-                    Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
+                    Account.findOneAndUpdate({address: addressWithBlockInfo.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
                         console.error('Error upserting account: ', error.message);
                     });
                 }
 
-                /*
-                const contractMetadata = await pxe.getContractMetadata(address);
+                
+                /*const contractMetadata = await pxe.getContractMetadata(address);
                 console.log("getting contract for address: ",address.toString())
                 if (contractMetadata.isContractInitialized || contractMetadata.isContractPubliclyDeployed) {
                     console.log("got contract for address: ",address.toString())
@@ -339,6 +457,53 @@ async function main() {
         console.log('Updating daily statistics...');
         await updateDailyStats();
     }, 3600000); // Every hour (3600000 ms)
+
+    // Process pending transactions
+    const processPendingTransactions = async () => {
+        try {
+            // console.log('Fetching pending transactions...');
+            /*const pendingTxCount = await jsonRpcClient.getPendingTxCount();
+            if (pendingTxCount === 0) {
+                // console.log('No pending transactions found.');
+                return;
+            }*/
+            const pendingTransactions = await retryAsync(() => jsonRpcClient.getPendingTxs());
+            // console.log(`Found ${pendingTransactions.length} pending transactions.`);
+
+            // Drop all existing pending transactions before inserting the new batch
+            
+            // console.log('Cleared existing pending transactions.');
+
+            const newPendingTxDocs = [];
+            for (const tx of pendingTransactions) {
+                try {
+                    const txHash = (await tx.getTxHash()).toString();
+                    newPendingTxDocs.push({
+                        txHash: txHash,
+                        data: tx.data.toBuffer().toString('hex'), // Serialize to hex string
+                        clientIvcProof: tx.clientIvcProof.toBuffer().toString('hex'), // Serialize to hex string
+                        contractClassLogs: tx.contractClassLogs.map(log => log.toBuffer().toString('hex')),
+                        publicFunctionCalldata: tx.publicFunctionCalldata.map(data => data.toBuffer().toString('hex')),
+                        timestamp: new Date(),
+                    });
+                } catch (e) {
+                    console.error('Error preparing pending transaction for save: ', e instanceof Error ? e.message : String(e));
+                }
+            }
+
+            await PendingTransaction.deleteMany({});
+            if (newPendingTxDocs.length > 0) {
+                await PendingTransaction.insertMany(newPendingTxDocs);
+                // console.log(`Inserted ${newPendingTxDocs.length} new pending transactions.`);
+            }
+
+        } catch (error) {
+            console.error('Error fetching pending transactions: ', error instanceof Error ? error.message : String(error));
+        }
+    };
+
+    // Schedule regular checks for pending transactions
+    setInterval(processPendingTransactions, 10000); 
 }
 
 
@@ -350,7 +515,7 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
     async function fetchBlocks() {
         let blocksBehind = 0;
         try {
-            const latestBlock = await jsonRpcClient.getBlockNumber();
+            const latestBlock = await retryAsync(() => jsonRpcClient.getBlockNumber());
             blocksBehind = latestBlock - currentBlockNum;
             
             logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum, ' Behind by: ', blocksBehind));
@@ -363,7 +528,7 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
                 const batchSize = Math.min(BATCH_SIZE, blocksBehind);
                 
                 // Fetch multiple blocks at once
-                const fetchedBlocks = await jsonRpcClient.getBlocks(currentBlockNum, batchSize);
+                const fetchedBlocks = await retryAsync(() => jsonRpcClient.getBlocks(currentBlockNum, batchSize));
                 
                 if (fetchedBlocks && fetchedBlocks.length > 0) {
                     // Add all fetched blocks to our queue
@@ -381,7 +546,7 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
             // Otherwise use individual block fetching for normal operation
             else {
                 while (currentBlockNum <= latestBlock) {
-                    const block = await jsonRpcClient.getBlock(currentBlockNum);
+                    const block = await retryAsync(() => jsonRpcClient.getBlock(currentBlockNum));
                     if (block) {
                         blocks.push(block);
                         currentBlockNum++;
@@ -392,6 +557,43 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
                     }
                 }
             }
+        } catch (error) {
+            logger.info(format('Error getting blocks: ', error));
+        } finally {
+            // Adjust polling interval based on how far behind we are
+            const pollInterval = blocksBehind > 100 ? 10 : 1000; // Poll faster if we're far behind
+            setTimeout(fetchBlocks, pollInterval);
+        }
+    }
+
+    fetchBlocks();
+}
+
+async function listenForNewBlocksPXE(blockNum: number, blocks: L2Block[], logger: Logger) {
+    const pxe = createPXEClient(PXE_URL);
+    let currentBlockNum = blockNum;
+    const BATCH_SIZE = 50; // Number of blocks to fetch at once when behind
+
+    async function fetchBlocks() {
+        let blocksBehind = 0;
+        try {
+            const latestBlock = await pxe.getBlockNumber();
+            blocksBehind = latestBlock - currentBlockNum;
+            
+            logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum, ' Behind by: ', blocksBehind));
+                        
+            while (currentBlockNum <= latestBlock) {
+                const block = await pxe.getBlock(currentBlockNum);
+                if (block) {
+                    blocks.push(block);
+                    currentBlockNum++;
+                } else {
+                    // Break if a block isn't found to avoid getting stuck
+                    console.log(`Block ${currentBlockNum} not found, skipping...`);
+                    currentBlockNum++;
+                }
+            }
+            
         } catch (error) {
             logger.info(format('Error getting blocks: ', error));
         } finally {
