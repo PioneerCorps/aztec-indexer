@@ -25,6 +25,14 @@ export const updateDailyStats = async (): Promise<void> => {
     const blockCount = await Block.countDocuments({
       timestamp: { $gte: today, $lt: tomorrow }
     });
+
+    const contractClassCount = await ContractClass.countDocuments({
+      creationTimestamp: { $gte: today, $lt: tomorrow }
+    });
+
+    const accountCount = await Account.countDocuments({
+      creationTimestamp: { $gte: today, $lt: tomorrow }
+    });
     
     // Calculate avg tx fee
     let avgTxFee = 0;
@@ -69,6 +77,8 @@ export const updateDailyStats = async (): Promise<void> => {
         blockCount,
         avgTxFee,
         avgBlockTime,
+        contractClassCount,
+        accountCount,
         lastUpdated: new Date()
       },
       { upsert: true }
@@ -180,6 +190,8 @@ export const indexHistoricalStats = async (startDate?: Date, maxDays = 100): Pro
           blockCount,
           avgTxFee,
           avgBlockTime,
+          contractClassCount,
+          accountCount,
           lastUpdated: new Date()
         },
         { upsert: true }
