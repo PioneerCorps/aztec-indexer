@@ -216,7 +216,7 @@ async function main() {
                         }
                     });*/
                     txEffect.privateLogs.forEach((log) => {
-                        if(log.toBuffer().toString('hex').includes("2ec28b91a5f838506d6042915005ff55cf7a0a5f889a83b11faed33a31b486f2")) {
+                        if(log.toBuffer().toString('hex').includes("85864497636cf755ae7bde03f267ce01a520981c21c3682aaf82a631")) {
                             addresses.push({
                                 address: new AztecAddress(log.toBuffer().subarray(32,64)),
                                 blockNumber: blockTxEffect.blockNumber,
