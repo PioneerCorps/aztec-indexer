@@ -33,7 +33,7 @@ import Reorg from './models/reorg.model.js';
 
 async function retryAsync<T>(
   fn: () => Promise<T>,
-  retries: number = 3,
+  retries: number = 5,
   delay: number = 1000,
   attempt: number = 1
 ): Promise<T> {
@@ -215,8 +215,6 @@ async function main() {
                             addresses.push(new AztecAddress(logBuffer.subarray(i,i+32)));
                         }
                     });*/
-
-
                     txEffect.privateLogs.forEach((log) => {
                         if(log.toBuffer().toString('hex').includes("2ec28b91a5f838506d6042915005ff55cf7a0a5f889a83b11faed33a31b486f2")) {
                             addresses.push({
@@ -321,136 +319,125 @@ async function main() {
         }
     },300);*/
 
-    setInterval(async () => {
-        if(contractClassesWithBlockInfo.length > 0) {
+    // ContractClass Listener
+    const processContractClassesToDb = async () => {
+        const batchSize = contractClassesWithBlockInfo.length > 20 ? 5 : 1;
+        let processedCount = 0;
+
+        while (processedCount < batchSize && contractClassesWithBlockInfo.length > 0) {
             const contractClassWithBlockInfo = contractClassesWithBlockInfo.shift();
-            if(contractClassWithBlockInfo) {
-                const contractClass = await retryAsync(() => jsonRpcClient.getContractClass(contractClassWithBlockInfo.id));
-                const functions: FunctionAbi[] = [];
-                if (contractClass){
-                    const contractClassDoc = new ContractClass({
-                        id: contractClassWithBlockInfo.id.toString(),
-                        artifactHash: contractClass.artifactHash.toString(),
-                        privateFunctionsRoot: contractClass.privateFunctionsRoot.toString(),
-                        packedBytecode: contractClass.packedBytecode,
-                        version: contractClass.version,
-                        blockHash: contractClassWithBlockInfo.blockHash,
-                        blockNumber: contractClassWithBlockInfo.blockNumber,
-                        txHash: contractClassWithBlockInfo.txHash,
-                        publicFunctions: functions,
-                        creationTimestamp: contractClassWithBlockInfo.timestamp,
-                    });
+            if (contractClassWithBlockInfo) {
+                console.log(`Processing contract class ${contractClassWithBlockInfo.id.toString()} for block ${contractClassWithBlockInfo.blockNumber} (Queue: ${contractClassesWithBlockInfo.length} remaining)`);
+                try {
+                    const contractClass = await retryAsync(() => jsonRpcClient.getContractClass(contractClassWithBlockInfo.id));
+                    const functions: FunctionAbi[] = []; // Assuming functions are not directly available or needed here yet
+                    if (contractClass) {
+                        const contractClassDoc = new ContractClass({
+                            id: contractClassWithBlockInfo.id.toString(),
+                            artifactHash: contractClass.artifactHash.toString(),
+                            privateFunctionsRoot: contractClass.privateFunctionsRoot.toString(),
+                            packedBytecode: contractClass.packedBytecode,
+                            version: contractClass.version,
+                            blockHash: contractClassWithBlockInfo.blockHash,
+                            blockNumber: contractClassWithBlockInfo.blockNumber,
+                            txHash: contractClassWithBlockInfo.txHash,
+                            publicFunctions: functions,
+                            creationTimestamp: contractClassWithBlockInfo.timestamp,
+                        });
 
-                    const { _id, ...contractClassWithoutId } = contractClassDoc.toObject();
-                    try {
+                        const { _id, ...contractClassWithoutId } = contractClassDoc.toObject();
                         await ContractClass.findOneAndUpdate(
-                            {id: contractClassWithBlockInfo.id.toString(), blockHash: contractClassWithBlockInfo.blockHash, blockNumber: contractClassWithBlockInfo.blockNumber},
+                            { id: contractClassWithBlockInfo.id.toString(), blockHash: contractClassWithBlockInfo.blockHash, blockNumber: contractClassWithBlockInfo.blockNumber },
                             contractClassWithoutId,
-                            {upsert: true}
-                        )
-                    } catch (e) {
-                        console.error('Error upserting contract class: ', e instanceof Error ? e.message : String(e));
+                            { upsert: true }
+                        );
+                        processedCount++;
                     }
+                } catch (e) {
+                    console.error('Error processing or upserting contract class: ', e instanceof Error ? e.message : String(e));
+                    // Optionally, re-add to queue or handle error differently
+                    // contractClassesWithBlockInfo.unshift(contractClassWithBlockInfo); // Re-add to front for retry
                 }
             }
         }
-    }, 1000);
 
-    //Account Listener
-    setInterval(async () => {
-        if(addresses.length > 0) {
+        const nextDelay = contractClassesWithBlockInfo.length > 10 ? 100 : 1000; // Poll faster with larger backlog
+        setTimeout(processContractClassesToDb, nextDelay);
+    };
+
+    processContractClassesToDb();
+
+    // Account Listener
+    const processAddressesToDb = async () => {
+        const batchSize = addresses.length > 50 ? 10 : 1; // Adapt batch size based on queue length
+        let processedCount = 0;
+
+        while (processedCount < batchSize && addresses.length > 0) {
             const addressWithBlockInfo = addresses.shift();
-            if(addressWithBlockInfo) {
-                
-                const contract = await retryAsync(() => jsonRpcClient.getContract(addressWithBlockInfo.address));
-                if (contract) {
-                    const contractClass = await retryAsync(() => jsonRpcClient.getContractClass(contract.currentContractClassId));
-                    let byteCode: Buffer = Buffer.from('');
-                    let privateFunctionsRoot = ""
-                    if(contractClass){
-                        byteCode = contractClass.packedBytecode.toString('hex');
-                        privateFunctionsRoot = contractClass.privateFunctionsRoot.toString()
-                    }
-                    let isContract = true;
-                    
-                    const functions: FunctionAbi[] = [];
-                    const name = contractClass || '';
-                    const account = new Account({
-                        address: addressWithBlockInfo.address.toString(),
-                        version: contract.version,
-                        deployer: contract.deployer.toString(),
-                        contractClassID: contract.currentContractClassId.toString(),
-                        isContract: isContract,
-                        balance: BigInt(0).toString(),
-                        functions: functions,
-                        byteCode: byteCode,
-                        name: name,
-                        privateFunctionsRoot: privateFunctionsRoot,
-                        blockNumber: addressWithBlockInfo.blockNumber,
-                        blockHash: addressWithBlockInfo.blockHash,
-                        txHash: addressWithBlockInfo.txHash,
-                        creationTimestamp: addressWithBlockInfo.timestamp,
-                    });
-                    const { _id, ...accountWithoutId } = account.toObject();
-                    Account.findOneAndUpdate({address: addressWithBlockInfo.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
-                        console.error('Error upserting account: ', error.message);
-                    });
-                }
-
-                
-                /*const contractMetadata = await pxe.getContractMetadata(address);
-                console.log("getting contract for address: ",address.toString())
-                if (contractMetadata.isContractInitialized || contractMetadata.isContractPubliclyDeployed) {
-                    console.log("got contract for address: ",address.toString())
-                    let isContract = true;
-                    let name = '';
-                    let functions: FunctionAbi[] = [];
-                    let byteCode : Buffer = Buffer.from('');
-                    if(contractMetadata.contractInstance?.currentContractClassId) {
-                        const contractClassMetadata = await pxe.getContractClassMetadata(contractMetadata.contractInstance?.currentContractClassId,true);
-                        if (contractClassMetadata){
-                            name = contractClassMetadata.artifact?.name || '';
-                            contractClassMetadata.artifact?.functions.forEach((functionAbi) => {
-                                functions.push({
-                                    name: functionAbi.name,
-                                    functionType: functionAbi.functionType,
-                                    isInternal: functionAbi.isInternal,
-                                    isStatic: functionAbi.isStatic,
-                                    parameters: functionAbi.parameters,
-                                    returnTypes: functionAbi.returnTypes,
-                                    isInitializer: functionAbi.isInitializer,
-                                });
-                            })
-                            if(contractClassMetadata.contractClass?.packedBytecode){
-                                byteCode = contractClassMetadata.contractClass?.packedBytecode;
-                            }
+            if (addressWithBlockInfo) {
+                console.log(`Processing address ${addressWithBlockInfo.address.toString()} for block ${addressWithBlockInfo.blockNumber} (Queue: ${addresses.length} remaining)`);
+                try {
+                    const contract = await retryAsync(() => jsonRpcClient.getContract(addressWithBlockInfo.address));
+                    if (contract) {
+                        const contractClass = await retryAsync(() => jsonRpcClient.getContractClass(contract.currentContractClassId));
+                        let byteCode: Buffer = Buffer.from('');
+                        let privateFunctionsRoot = "";
+                        let name = ''; // Initialize name
+                        if (contractClass) {
+                            byteCode = contractClass.packedBytecode;
+                            privateFunctionsRoot = contractClass.privateFunctionsRoot.toString();
+                            // If contractClass has an artifact with a name, you could use it:
+                            // name = contractClass.artifact?.name || '';
                         }
+                        
+                        // Determine if it's a contract (e.g., based on deployer or other logic)
+                        // For example, an account might have ZERO_ADDRESS as deployer
+                        let isContract = true;
+                        if (contract.deployer.toString() === ZERO_ADDRESS) {
+                           // This logic might need refinement based on your definition of an "account" vs "contract"
+                           // isContract = false; // Uncomment or adjust if needed
+                        }
+
+                        const functions: FunctionAbi[] = []; // Populate if function ABIs are needed and accessible
+
+                        const accountDoc = new Account({
+                            address: addressWithBlockInfo.address.toString(),
+                            version: contract.version,
+                            deployer: contract.deployer.toString(),
+                            contractClassID: contract.currentContractClassId.toString(),
+                            isContract: isContract,
+                            balance: BigInt(0).toString(), // Balance likely needs a separate update mechanism
+                            functions: functions,
+                            byteCode: byteCode,
+                            name: name,
+                            privateFunctionsRoot: privateFunctionsRoot,
+                            blockNumber: addressWithBlockInfo.blockNumber,
+                            blockHash: addressWithBlockInfo.blockHash,
+                            txHash: addressWithBlockInfo.txHash,
+                            creationTimestamp: addressWithBlockInfo.timestamp,
+                        });
+                        const { _id, ...accountWithoutId } = accountDoc.toObject();
+                        await Account.findOneAndUpdate(
+                            { address: addressWithBlockInfo.address.toString() },
+                            accountWithoutId,
+                            { upsert: true }
+                        );
+                        processedCount++;
                     }
-                    
-                    if(contractMetadata.contractInstance?.deployer.toString() === ZERO_ADDRESS) {
-                        isContract = false;
-                    }
-                    
-                    const account = new Account({
-                        address: address.toString(),
-                        version: contractMetadata.contractInstance?.version,
-                        deployer: contractMetadata.contractInstance?.deployer.toString(),
-                        contractClassID: contractMetadata.contractInstance?.currentContractClassId.toString(),
-                        isContract: isContract,
-                        balance: BigInt(0).toString(),
-                        functions: functions,
-                        byteCode: byteCode.toString('hex'),
-                        name: name,
-                        privateFunctionsRoot: "",
-                    });
-                    const { _id, ...accountWithoutId } = account.toObject();
-                    Account.findOneAndUpdate({address: address.toString()}, accountWithoutId, {upsert: true}).catch((error) => {
-                        console.error('Error upserting account: ', error.message);
-                    });
-                }*/
+                } catch (e) {
+                    console.error('Error processing or upserting account: ', e instanceof Error ? e.message : String(e));
+                    // Optional: re-queue the item if processing failed and is retryable
+                    // addresses.unshift(addressWithBlockInfo);
+                }
             }
         }
-    }, 300);
+
+        // Set polling interval based on backlog size
+        const nextDelay = addresses.length > 20 ? 100 : 1000; // Poll faster with larger backlog
+        setTimeout(processAddressesToDb, nextDelay);
+    };
+
+    processAddressesToDb();
 
     // Add daily stats update interval (runs every hour)
     setInterval(async () => {
@@ -503,7 +490,7 @@ async function main() {
     };
 
     // Schedule regular checks for pending transactions
-    setInterval(processPendingTransactions, 10000); 
+    setInterval(processPendingTransactions, 10000);
 }
 
 

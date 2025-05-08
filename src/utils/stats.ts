@@ -1,6 +1,8 @@
 import Stats from '../models/stats.model.js';
 import Transaction from '../models/transaction.model.js';
 import Block from '../models/block.model.js';
+import { ContractClass } from '../models/contractClass.model.js';
+import { Account } from '../models/account.model.js';
 
 /**
  * Updates daily statistics for transactions and blocks
@@ -113,6 +115,14 @@ export const indexHistoricalStats = async (startDate?: Date, maxDays = 100): Pro
       
       const blockCount = await Block.countDocuments({
         timestamp: { $gte: currentDate, $lt: nextDate }
+      });
+
+      const contractClassCount = await ContractClass.countDocuments({
+        creationTimestamp: { $gte: currentDate, $lt: nextDate }
+      });
+
+      const accountCount = await Account.countDocuments({
+        creationTimestamp: { $gte: currentDate, $lt: nextDate }
       });
       
       // Calculate avg tx fee for the day
