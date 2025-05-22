@@ -145,8 +145,6 @@ async function main() {
                     size: block.body.toBuffer().length,
                     feePerDaGas: block.header.globalVariables.gasFees.feePerDaGas.toNumber(),
                     feePerL2Gas: block.header.globalVariables.gasFees.feePerL2Gas.toNumber(),
-                    endStateHash: block.getEndStateHash().toString('hex'),
-                    startStateHash: block.getStartStateHash().toString('hex'),
                 });
 
                 // Ensure _id is not in L2Block
@@ -244,7 +242,7 @@ async function main() {
                         contractAddress.push(log.contractAddress.toBuffer().toString('hex'));
                         if(log.contractAddress.toBuffer().toString('hex') === "0000000000000000000000000000000000000000000000000000000000000003") {
                             contractClassesWithBlockInfo.push({
-                                id: log.fields[1],
+                                id: log.fields.fields[1],
                                 blockNumber: blockTxEffect.blockNumber,
                                 blockHash: blockTxEffect.blockHash,
                                 txHash: txEffect.txHash.toString(),
@@ -252,7 +250,7 @@ async function main() {
                             })
                         }
                         var contractAddressLog: String[] = []; 
-                        log.fields.forEach((field) => {
+                        log.fields.fields.forEach((field) => {
                             contractAddressLog.push(field.toBuffer().toString('hex'));
                         })
                         contractAddressLogs.push(contractAddressLog.join(','));                        
