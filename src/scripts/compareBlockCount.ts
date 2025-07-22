@@ -82,8 +82,8 @@ async function main() {
           if (block) {
             console.log(`✅ Block ${blockNum} exists on the node:`);
             console.log(`   - Hash: ${(await block.hash()).toString()}`);
-            console.log(`   - Number: ${block.header.globalVariables.blockNumber.toNumber()}`);
-            console.log(`   - Timestamp: ${new Date(block.header.globalVariables.timestamp.toNumber() * 1000).toISOString()}`);
+            console.log(`   - Number: ${block.header.globalVariables.blockNumber}`);
+            console.log(`   - Timestamp: ${new Date(Number(block.header.globalVariables.timestamp) * 1000).toISOString()}`);
             console.log(`   - Transactions: ${block.body.txEffects.length}`);
           } else {
             console.log(`❌ Block ${blockNum} does not exist on the node.`);

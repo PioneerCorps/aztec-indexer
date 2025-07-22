@@ -132,8 +132,8 @@ async function main() {
             if (block) {
                 console.log('Got Block: ', block.header.globalVariables.blockNumber, 
                           `(Queue: ${blocksArray.length} remaining)`);
-                
-                const tsDate = new Date(block.header.globalVariables.timestamp*1000);
+
+                const tsDate = new Date(Number(block.header.globalVariables.timestamp) * 1000);
                 const L2Block = new Block({
                     hash: (await block.hash()).toString(),
                     number: block.header.globalVariables.blockNumber,
@@ -143,8 +143,8 @@ async function main() {
                     feeRecipient: block.header.globalVariables.feeRecipient,
                     txCount: block.body.txEffects.length,
                     size: block.body.toBuffer().length,
-                    feePerDaGas: block.header.globalVariables.gasFees.feePerDaGas.toNumber(),
-                    feePerL2Gas: block.header.globalVariables.gasFees.feePerL2Gas.toNumber(),
+                    feePerDaGas: block.header.globalVariables.gasFees.feePerDaGas,
+                    feePerL2Gas: block.header.globalVariables.gasFees.feePerL2Gas,
                 });
 
                 // Ensure _id is not in L2Block
