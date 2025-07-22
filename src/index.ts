@@ -130,13 +130,13 @@ async function main() {
         while (processedCount < batchSize && blocksArray.length > 0) {
             const block = blocksArray.shift();
             if (block) {
-                console.log('Got Block: ', block.header.globalVariables.blockNumber.toNumber(), 
+                console.log('Got Block: ', block.header.globalVariables.blockNumber, 
                           `(Queue: ${blocksArray.length} remaining)`);
                 
-                const tsDate = new Date(block.header.globalVariables.timestamp.toNumber()*1000);
+                const tsDate = new Date(block.header.globalVariables.timestamp*1000);
                 const L2Block = new Block({
                     hash: (await block.hash()).toString(),
-                    number: block.header.globalVariables.blockNumber.toNumber(),
+                    number: block.header.globalVariables.blockNumber,
                     timestamp: tsDate,
                     coinbaseAccount: block.header.globalVariables.coinbase,
                     totalFees: block.header.totalFees.toNumber(),
@@ -150,11 +150,11 @@ async function main() {
                 // Ensure _id is not in L2Block
                 const { _id, ...L2BlockWithoutId } = L2Block.toObject(); 
 
-                BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber.toNumber(), blockHash: (await block.hash()).toString(),timestamp: tsDate});
+                BlockTxEffects.push({txEffect: block.body.txEffects, blockNumber: block.header.globalVariables.blockNumber, blockHash: (await block.hash()).toString(),timestamp: tsDate});
                 
                 try {
                     await Block.findOneAndUpdate(
-                        {number: block.header.globalVariables.blockNumber.toNumber()}, 
+                        {number: block.header.globalVariables.blockNumber}, 
                         L2BlockWithoutId, 
                         {upsert: true}
                     );
@@ -477,7 +477,7 @@ async function main() {
                         hash: txHash,
                         data: tx.data.toBuffer().toString('hex'), // Serialize to hex string
                         clientIvcProof: tx.clientIvcProof.toBuffer().toString('hex'), // Serialize to hex string
-                        contractClassLogs: tx.contractClassLogs.map(log => log.toBuffer().toString('hex')),
+                        contractClassLogs: tx.getContractClassLogs().map(log => log.toBuffer().toString('hex')),
                         publicFunctionCalldata: tx.publicFunctionCalldata.map(data => data.toBuffer().toString('hex')),
                         timestamp: new Date(),
                     });
@@ -532,9 +532,9 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
                     // Update our position to after the last block received
                     if (fetchedBlocks.length > 0) {
                         const lastBlock = fetchedBlocks[fetchedBlocks.length - 1];
-                        const lastBlockNum = lastBlock.header.globalVariables.blockNumber.toNumber();
+                        const lastBlockNum = lastBlock.header.globalVariables.blockNumber;
                         currentBlockNum = lastBlockNum + 1;
-                        console.log(`Batch sync progress: Fetched blocks ${fetchedBlocks[0].header.globalVariables.blockNumber.toNumber()}-${lastBlockNum}`);
+                        console.log(`Batch sync progress: Fetched blocks ${fetchedBlocks[0].header.globalVariables.blockNumber}-${lastBlockNum}`);
                     }
                 }
             } 
