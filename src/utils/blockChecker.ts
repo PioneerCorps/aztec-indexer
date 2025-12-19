@@ -1,4 +1,4 @@
-import { createAztecNodeClient } from '@aztec/aztec.js';
+import { createAztecNodeClient } from '@aztec/aztec.js/node';
 import Block, { IBlock } from '../models/block.model.js';
 import Transaction, { ITransaction } from '../models/transaction.model.js';
 import { connectDB } from './db.js';

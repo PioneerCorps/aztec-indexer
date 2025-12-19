@@ -1,22 +1,10 @@
-import { getDeployedTestAccountsWallets, getInitialTestAccountsWallets } from '@aztec/accounts/testing';
-import {
-  createLogger,
-  createPXEClient,
-  createAztecNodeClient,
-  waitForPXE,
-  L2Block,
-  Wallet,
-  AccountWalletWithSecretKey,
-  AztecAddress,
-  FunctionArtifact,
-  Logger,
-  loadContractArtifact,
-  Fr,
-} from '@aztec/aztec.js';
-import {
-    TxEffect,
-    TxHash,
-} from '@aztec/stdlib/tx';
+import { createLogger, type Logger } from '@aztec/aztec.js/log';
+import { createAztecNodeClient } from '@aztec/aztec.js/node';
+import { L2Block } from '@aztec/stdlib/block';
+import type { TxEffect, TxHash } from '@aztec/stdlib/tx';
+import { AztecAddress } from '@aztec/stdlib/aztec-address';
+import { Fr } from '@aztec/foundation/curves/bn254';
+import { BlockNumber } from '@aztec/foundation/branded-types';
 import { format } from 'util';
 import { connectDB } from './utils/db.js';
 import Transaction  from './models/transaction.model.js';
@@ -57,13 +45,10 @@ async function main() {
     console.log('Starting Aztec Explorer');
     const logger = createLogger('token');
     console.log(PXE_URL)
-    const pxe = createPXEClient(PXE_URL);
-    pxe.getTxReceipt
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
-    logger.debug('Waiting for PXE');
-    console.log('Waiting for PXE');
-    //await waitForPXE(pxe, logger);
-    logger.debug('PXE is ready');
+    logger.debug('Waiting for Node');
+    console.log('Waiting for Node');
+    logger.debug('Node client ready');
     connectDB();
     
     // Initialize the block checker for finality and reorg detection
@@ -476,7 +461,6 @@ async function main() {
                     newPendingTxDocs.push({
                         hash: txHash,
                         data: tx.data.toBuffer().toString('hex'), // Serialize to hex string
-                        clientIvcProof: tx.clientIvcProof.toBuffer().toString('hex'), // Serialize to hex string
                         contractClassLogs: tx.getContractClassLogs().map(log => log.toBuffer().toString('hex')),
                         publicFunctionCalldata: tx.publicFunctionCalldata.map(data => data.toBuffer().toString('hex')),
                         timestamp: new Date(),
@@ -521,9 +505,9 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
                 
                 // Calculate how many blocks to fetch (up to BATCH_SIZE)
                 const batchSize = Math.min(BATCH_SIZE, blocksBehind);
-                
+
                 // Fetch multiple blocks at once
-                const fetchedBlocks = await retryAsync(() => jsonRpcClient.getBlocks(currentBlockNum, batchSize));
+                const fetchedBlocks = await retryAsync(() => jsonRpcClient.getBlocks(BlockNumber(currentBlockNum), batchSize));
                 
                 if (fetchedBlocks && fetchedBlocks.length > 0) {
                     // Add all fetched blocks to our queue
@@ -541,7 +525,7 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
             // Otherwise use individual block fetching for normal operation
             else {
                 while (currentBlockNum <= latestBlock) {
-                    const block = await retryAsync(() => jsonRpcClient.getBlock(currentBlockNum));
+                    const block = await retryAsync(() => jsonRpcClient.getBlock(BlockNumber(currentBlockNum)));
                     if (block) {
                         blocks.push(block);
                         currentBlockNum++;
@@ -552,43 +536,6 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
                     }
                 }
             }
-        } catch (error) {
-            logger.info(format('Error getting blocks: ', error));
-        } finally {
-            // Adjust polling interval based on how far behind we are
-            const pollInterval = blocksBehind > 100 ? 10 : 1000; // Poll faster if we're far behind
-            setTimeout(fetchBlocks, pollInterval);
-        }
-    }
-
-    fetchBlocks();
-}
-
-async function listenForNewBlocksPXE(blockNum: number, blocks: L2Block[], logger: Logger) {
-    const pxe = createPXEClient(PXE_URL);
-    let currentBlockNum = blockNum;
-    const BATCH_SIZE = 50; // Number of blocks to fetch at once when behind
-
-    async function fetchBlocks() {
-        let blocksBehind = 0;
-        try {
-            const latestBlock = await pxe.getBlockNumber();
-            blocksBehind = latestBlock - currentBlockNum;
-            
-            logger.info(format('Latest block: ', latestBlock, ' Current block: ', currentBlockNum, ' Behind by: ', blocksBehind));
-                        
-            while (currentBlockNum <= latestBlock) {
-                const block = await pxe.getBlock(currentBlockNum);
-                if (block) {
-                    blocks.push(block);
-                    currentBlockNum++;
-                } else {
-                    // Break if a block isn't found to avoid getting stuck
-                    console.log(`Block ${currentBlockNum} not found, skipping...`);
-                    currentBlockNum++;
-                }
-            }
-            
         } catch (error) {
             logger.info(format('Error getting blocks: ', error));
         } finally {

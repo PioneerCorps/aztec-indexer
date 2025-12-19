@@ -14,9 +14,9 @@
     "fetch-missing-blocks": "yarn build && node ./dest/scripts/fetchMissingBlocks.js"
   },
   "dependencies": {
-    "@aztec/accounts": "2.0.2",
-    "@aztec/aztec.js": "2.0.2",
-    "@aztec/noir-contracts.js": "2.0.2",
+    "@aztec/accounts": "3.0.0-nightly.20251212",
+    "@aztec/aztec.js": "3.0.0-nightly.20251212",
+    "@aztec/noir-contracts.js": "3.0.0-nightly.20251212",
     "@types/node": "^20.6.3",
     "mongoose": "^8.5.4",
     "typescript": "^5.2.2"

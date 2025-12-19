@@ -1,6 +1,7 @@
 import { connectDB } from '../utils/db.js';
 import Block from '../models/block.model.js';
-import { createAztecNodeClient } from '@aztec/aztec.js';
+import { createAztecNodeClient } from '@aztec/aztec.js/node';
+import { BlockNumber } from '@aztec/foundation/branded-types';
 
 const { PXE_URL = 'http://138.201.52.21:8080' } = process.env;
 
@@ -77,7 +78,7 @@ async function main() {
       for (const blockNum of blocksToCheck) {
         try {
           console.log(`Checking block ${blockNum} on the node...`);
-          const block = await jsonRpcClient.getBlock(blockNum);
+          const block = await jsonRpcClient.getBlock(BlockNumber(blockNum));
           
           if (block) {
             console.log(`✅ Block ${blockNum} exists on the node:`);

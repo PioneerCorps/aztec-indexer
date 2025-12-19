@@ -1,7 +1,8 @@
 import { connectDB } from '../utils/db.js';
 import Block from '../models/block.model.js';
-import { createAztecNodeClient } from '@aztec/aztec.js';
+import { createAztecNodeClient } from '@aztec/aztec.js/node';
 import Transaction from '../models/transaction.model.js';
+import { BlockNumber } from '@aztec/foundation/branded-types';
 
 const { PXE_URL = 'http://188.40.109.171:8080' } = process.env;
 
@@ -43,10 +44,10 @@ Examples:
     // Get the latest block number from the chain
     const latestBlockNumber = await jsonRpcClient.getBlockNumber();
     console.log(`Latest block number on chain: ${latestBlockNumber}`);
-    
-    // Get range to fetch
+
+    // Get range to fetch (convert BlockNumber to plain number for iteration)
     let fromBlock = 0;
-    let toBlock = latestBlockNumber;
+    let toBlock = Number(latestBlockNumber);
     
     // Parse command arguments
     const allFlag = args.includes('--all');
@@ -83,14 +84,14 @@ Examples:
         }
         
         // Check for missing blocks at the end
-        if (highestBlock < latestBlockNumber) {
-          for (let i = highestBlock + 1; i <= latestBlockNumber; i++) {
+        if (highestBlock < Number(latestBlockNumber)) {
+          for (let i = highestBlock + 1; i <= Number(latestBlockNumber); i++) {
             missingBlocks.push(i);
           }
         }
       } else {
         // No blocks in database, fetch all from genesis to latest
-        for (let i = 1; i <= latestBlockNumber; i++) {
+        for (let i = 1; i <= Number(latestBlockNumber); i++) {
           missingBlocks.push(i);
         }
       }
@@ -158,7 +159,7 @@ Examples:
 async function fetchAndStoreBlock(blockNumber: number, jsonRpcClient: any) {
   try {
     // Fetch block from the Aztec node
-    const block = await jsonRpcClient.getBlock(blockNumber);
+    const block = await jsonRpcClient.getBlock(BlockNumber(blockNumber));
     
     if (!block) {
       console.error(`Block ${blockNumber} not found on chain`);
