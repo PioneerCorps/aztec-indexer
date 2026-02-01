@@ -1,18 +1,22 @@
-FROM node:18
+# Build stage
+FROM node:18-alpine AS builder
 WORKDIR /usr/src/app
 
-COPY package*.json ./
-RUN npm install
+COPY package*.json yarn.lock* ./
+RUN yarn install --frozen-lockfile
 
 COPY . .
-
-# Install TypeScript globally
-RUN npm install -g typescript
-
-# Expose the port the app runs on
-EXPOSE 8080
-
 RUN yarn build
 
-# Define the command to run the compiled app
+# Production stage
+FROM node:18-alpine
+WORKDIR /usr/src/app
+
+COPY package*.json yarn.lock* ./
+RUN yarn install --frozen-lockfile --production && yarn cache clean
+
+COPY --from=builder /usr/src/app/dest ./dest
+
+EXPOSE 8080
+
 CMD ["node", "./dest/index.js"]

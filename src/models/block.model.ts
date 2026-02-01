@@ -7,7 +7,7 @@ interface IBlock extends Document {
     previousHash: string;
     timestamp: Date;
     coinbaseAccount: string;
-    totalFees: number;
+    totalFees: string;
     feeRecipient: string;
     txCount: number;
     paddingTxCount: number;
@@ -25,7 +25,7 @@ const blockSchema = new Schema<IBlock>({
     //previousHash: { type: String, required: true },
     timestamp: { type: Date, required: true },
     coinbaseAccount: { type: String, required: true },
-    totalFees: { type: Number, required: true },
+    totalFees: { type: String, required: true },
     feeRecipient: { type: String, required: true },
     txCount: { type: Number, required: true },
     paddingTxCount: { type: Number, required: true },

@@ -38,7 +38,10 @@ async function retryAsync<T>(
   }
 }
 
-const { PXE_URL = 'http://138.201.52.21:8080' } = process.env;
+const {
+    PXE_URL = 'http://138.201.52.21:8080',
+    SEARCH_HEX_VALUE = '28da3fc471387d4e20b646b77abc8cdfc02a339a7507285a73d84f9b97b13486'
+} = process.env;
 
 
 async function main() {
@@ -124,7 +127,7 @@ async function main() {
                     number: block.header.globalVariables.blockNumber,
                     timestamp: tsDate,
                     coinbaseAccount: block.header.globalVariables.coinbase,
-                    totalFees: block.header.totalFees.toNumber(),
+                    totalFees: block.header.totalFees.toString(),
                     feeRecipient: block.header.globalVariables.feeRecipient,
                     txCount: block.body.txEffects.length,
                     size: block.body.toBuffer().length,
@@ -200,7 +203,7 @@ async function main() {
                     });*/
                     txEffect.privateLogs.forEach((log) => {
                         const logHexString = log.toBuffer().toString('hex');
-                        const searchValueHex = "2ec28b91a5f838506d6042915005ff55cf7a0a5f889a83b11faed33a31b486f2";
+                        const searchValueHex = SEARCH_HEX_VALUE;
                         const startIndexInHex = logHexString.indexOf(searchValueHex);
 
                         if (startIndexInHex !== -1) {
