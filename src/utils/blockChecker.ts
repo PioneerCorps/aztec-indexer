@@ -16,6 +16,20 @@ interface L2Tips {
   finalized: ChainTip;
 }
 
+// New API response structure from Aztec node
+interface L2TipsApiResponse {
+  proposed?: ChainTip;
+  checkpointed?: ChainTip;
+  proven?: {
+    block?: ChainTip;
+    checkpoint?: ChainTip;
+  };
+  finalized?: {
+    block?: ChainTip;
+    checkpoint?: ChainTip;
+  };
+}
+
 /**
  * Class to handle block status checking and reorg detection
  */
@@ -157,7 +171,16 @@ export class BlockChecker {
   async getL2Tips(): Promise<L2Tips> {
     try {
       // Call the node to get chain tips
-      const tips = await this.nodeClient.getL2Tips();
+      const apiResponse: L2TipsApiResponse = await this.nodeClient.getL2Tips();
+
+      // Transform the new API response structure to our expected format
+      // Use proposed as latest, proven.block as proven, and finalized.block as finalized
+      const tips: L2Tips = {
+        latest: apiResponse.proposed || { number: 0, hash: '' },
+        proven: apiResponse.proven?.block || { number: 0, hash: '' },
+        finalized: apiResponse.finalized?.block || { number: 0, hash: '' }
+      };
+
       return tips;
     } catch (error) {
       console.error('Error getting L2 tips:', error);
