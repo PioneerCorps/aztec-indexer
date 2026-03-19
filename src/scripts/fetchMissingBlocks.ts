@@ -214,7 +214,7 @@ async function fetchAndStoreBlock(blockNumber: number, jsonRpcClient: any) {
         blockNumber: block.header.globalVariables.blockNumber.toNumber(),
         timestamp: tsDate,
         revertCode: txEffect.revertCode.getDescription(),
-        transactionFee: txEffect.transactionFee.toNumber(),
+        transactionFee: txEffect.transactionFee.toString(),
         noteHashes: noteHashes.toString(),
         nullifiers: txEffect.nullifiers.toString(),
         l2ToL1Msgs: txEffect.l2ToL1Msgs.toString(),

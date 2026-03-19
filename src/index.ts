@@ -40,7 +40,7 @@ async function retryAsync<T>(
 
 const {
     PXE_URL = 'http://138.201.52.21:8080',
-    SEARCH_HEX_VALUE = '28da3fc471387d4e20b646b77abc8cdfc02a339a7507285a73d84f9b97b13486'
+    SEARCH_HEX_VALUE = '1a7e1badb79abdd38c684b3c8306ffe7ecb33c69e3380d9855730aaaa83a21a8'
 } = process.env;
 
 
@@ -251,7 +251,7 @@ async function main() {
                         blockHash: blockTxEffect.blockHash,
                         timestamp: blockTxEffect.timestamp,
                         revertCode: txEffect.revertCode.getDescription(),
-                        transactionFee: txEffect.transactionFee.toNumber(),
+                        transactionFee: txEffect.transactionFee.toString(),
                         noteHashes: noteHashes.toString(),
                         nullifiers: txEffect.nullifiers.toString(),
                         l2ToL1Msgs: txEffect.l2ToL1Msgs.toString(),

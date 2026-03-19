@@ -8,7 +8,7 @@ interface ITransaction extends Document {
     index: number;
     revertCode: string;
     timestamp: Date;
-    transactionFee: number;
+    transactionFee: string;
     noteHashes: string;
     nullifiers: string;
     l2ToL1Msgs: string;
@@ -28,7 +28,7 @@ const transactionSchema = new Schema<ITransaction>({
     blockHash: { type: String, required: true },
     revertCode: { type: String, required: true },
     timestamp: { type: Date, required: true },
-    transactionFee: { type: Number, required: true },
+    transactionFee: { type: String, required: true },
     noteHashes: { type: String, required: true },
     nullifiers: { type: String, required: true },
     l2ToL1Msgs: { type: String, required: true },
@@ -36,10 +36,10 @@ const transactionSchema = new Schema<ITransaction>({
     unencryptedLogsLength: { type: Number, required: true },
     uneencryptedLogs: { type: String, required: true },
     encryptedLogs: { type: String, required: false },
-    finalityStatus: { 
-        type: String, 
+    finalityStatus: {
+        type: String,
         enum: Object.values(FinalityStatus),
-        default: FinalityStatus.PRECONFIRMED 
+        default: FinalityStatus.PRECONFIRMED
     },
     contractAddress: { type: String, required: false },
     contractLogs: { type: String, required: false },
