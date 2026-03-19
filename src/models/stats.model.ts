@@ -4,7 +4,7 @@ interface IStats extends Document {
   date: Date;
   txCount: number;
   blockCount: number;
-  avgTxFee: number;
+  avgTxFee: string;
   avgBlockTime: number;
   contractClassCount: number;
   accountCount: number;
@@ -27,8 +27,8 @@ const statsSchema = new Schema({
     default: 0 
   },
   avgTxFee: {
-    type: Number,
-    default: 0
+    type: String,
+    default: '0'
   },
   avgBlockTime: {
     type: Number,

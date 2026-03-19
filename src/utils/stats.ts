@@ -35,15 +35,15 @@ export const updateDailyStats = async (): Promise<void> => {
     });
     
     // Calculate avg tx fee
-    let avgTxFee = 0;
+    let avgTxFee = '0';
     if (txCount > 0) {
       const txs = await Transaction.find(
         { timestamp: { $gte: today, $lt: tomorrow } },
         { transactionFee: 1, _id: 0 }
       );
-      
-      const totalFees = txs.reduce((sum, tx) => sum + (tx.transactionFee || 0), 0);
-      avgTxFee = totalFees / txs.length;
+
+      const totalFees = txs.reduce((sum, tx) => sum + BigInt(tx.transactionFee || '0'), BigInt(0));
+      avgTxFee = (totalFees / BigInt(txs.length)).toString();
     }
     
     // Calculate average block time
@@ -136,15 +136,15 @@ export const indexHistoricalStats = async (startDate?: Date, maxDays = 100): Pro
       });
       
       // Calculate avg tx fee for the day
-      let avgTxFee = 0;
+      let avgTxFee = '0';
       if (txCount > 0) {
         const txs = await Transaction.find(
           { timestamp: { $gte: currentDate, $lt: nextDate } },
           { transactionFee: 1, _id: 0 }
         );
-        
-        const totalFees = txs.reduce((sum, tx) => sum + (tx.transactionFee || 0), 0);
-        avgTxFee = totalFees / txs.length;
+
+        const totalFees = txs.reduce((sum, tx) => sum + BigInt(tx.transactionFee || '0'), BigInt(0));
+        avgTxFee = (totalFees / BigInt(txs.length)).toString();
       }
       
       // Calculate average block time
