@@ -48,9 +48,6 @@ const statsSchema = new Schema({
   }
 });
 
-// Create a compound index for optimization
-statsSchema.index({ date: 1 });
-
 const Stats = mongoose.model<IStats>('Stats', statsSchema);
 
 export default Stats; 
