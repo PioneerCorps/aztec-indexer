@@ -26,7 +26,7 @@ COPY package*.json yarn.lock* ./
 RUN yarn install --frozen-lockfile --production && yarn cache clean
 
 # Ensure bb binaries are executable and check dependencies
-RUN echo "===== BB BINARY CHECK START =====" && \
+RUN date && echo "===== BB BINARY CHECK START =====" && \
     ls -la /usr/src/app/node_modules/@aztec/bb.js/build/ 2>&1 || echo "build dir not found" && \
     find /usr/src/app/node_modules/@aztec/bb.js/build -name 'bb' -type f -exec chmod +x {} \; 2>&1 || echo "chmod bb failed" && \
     find /usr/src/app/node_modules/@aztec/bb.js/build -name '*.node' -type f -exec chmod +x {} \; 2>&1 || echo "chmod .node failed" && \
