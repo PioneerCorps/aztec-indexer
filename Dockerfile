@@ -12,10 +12,11 @@ RUN yarn build
 FROM node:22
 WORKDIR /usr/src/app
 
-# Install dependencies required for native binaries
+# Install dependencies required for bb native binary
 RUN apt-get update && apt-get install -y \
     libc6 \
     libstdc++6 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json yarn.lock* ./
