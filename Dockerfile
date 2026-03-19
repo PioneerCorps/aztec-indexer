@@ -19,16 +19,27 @@ RUN apt-get update && apt-get install -y \
     libstdc++6 \
     libgomp1 \
     libtinfo6 \
+    file \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json yarn.lock* ./
 RUN yarn install --frozen-lockfile --production && yarn cache clean
 
+# Debug: Check bb binary after installation
+RUN echo "Checking bb binary..." && \
+    find /usr/src/app/node_modules/@aztec/bb.js -name 'bb' -type f 2>/dev/null | head -5 && \
+    BB_PATH=$(find /usr/src/app/node_modules/@aztec/bb.js/build -name 'bb' -type f 2>/dev/null | grep linux | head -1) && \
+    if [ -n "$BB_PATH" ]; then \
+        echo "Found bb at: $BB_PATH" && \
+        file "$BB_PATH" && \
+        ldd "$BB_PATH" 2>&1 | head -20 || echo "ldd failed" && \
+        chmod +x "$BB_PATH"; \
+    else \
+        echo "WARNING: bb binary not found!"; \
+    fi
+
 ENV SEARCH_HEX_VALUE=28da3fc471387d4e20b646b77abc8cdfc02a339a7507285a73d84f9b97b13486
 ENV PXE_URL=http://138.201.52.21:8080
-ENV DEBUG=*
-# Force WASM backend if native fails (comment out to try native first)
-# ENV BB_BACKEND=wasm
 
 COPY --from=builder /usr/src/app/dest ./dest
 
