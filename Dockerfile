@@ -14,9 +14,11 @@ WORKDIR /usr/src/app
 
 # Install dependencies required for bb native binary
 RUN apt-get update && apt-get install -y \
-    libc6 \
+    ca-certificates \
+    libgcc-s1 \
     libstdc++6 \
     libgomp1 \
+    libtinfo6 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json yarn.lock* ./
@@ -25,6 +27,8 @@ RUN yarn install --frozen-lockfile --production && yarn cache clean
 ENV SEARCH_HEX_VALUE=28da3fc471387d4e20b646b77abc8cdfc02a339a7507285a73d84f9b97b13486
 ENV PXE_URL=http://138.201.52.21:8080
 ENV DEBUG=*
+# Force WASM backend if native fails (comment out to try native first)
+# ENV BB_BACKEND=wasm
 
 COPY --from=builder /usr/src/app/dest ./dest
 
