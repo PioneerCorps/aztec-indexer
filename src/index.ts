@@ -1,6 +1,7 @@
 import { createLogger, type Logger } from '@aztec/aztec.js/log';
 import { createAztecNodeClient } from '@aztec/aztec.js/node';
 import { L2Block } from '@aztec/stdlib/block';
+import type { BlockResponse } from '@aztec/stdlib/interfaces/client';
 import type { TxEffect, TxHash } from '@aztec/stdlib/tx';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import { Fr } from '@aztec/foundation/curves/bn254';
@@ -493,6 +494,9 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
     const jsonRpcClient = createAztecNodeClient(PXE_URL);
     let currentBlockNum = blockNum;
     const BATCH_SIZE = 50; // Number of blocks to fetch at once when behind
+    const blockFetchOptions = { includeTransactions: true } as const;
+    const toL2Block = (block: BlockResponse<typeof blockFetchOptions>) =>
+        new L2Block(block.archive, block.header, block.body, block.checkpointNumber, block.indexWithinCheckpoint);
 
     async function fetchBlocks() {
         let blocksBehind = 0;
@@ -510,11 +514,11 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
                 const batchSize = Math.min(BATCH_SIZE, blocksBehind);
 
                 // Fetch multiple blocks at once
-                const fetchedBlocks = await retryAsync(() => jsonRpcClient.getBlocks(BlockNumber(currentBlockNum), batchSize));
+                const fetchedBlocks = await retryAsync(() => jsonRpcClient.getBlocks(BlockNumber(currentBlockNum), batchSize, blockFetchOptions));
                 
                 if (fetchedBlocks && fetchedBlocks.length > 0) {
                     // Add all fetched blocks to our queue
-                    fetchedBlocks.forEach(block => blocks.push(block));
+                    fetchedBlocks.forEach(block => blocks.push(toL2Block(block)));
                     
                     // Update our position to after the last block received
                     if (fetchedBlocks.length > 0) {
@@ -528,9 +532,9 @@ async function listenForNewBlocks2(blockNum: number, blocks: L2Block[], logger: 
             // Otherwise use individual block fetching for normal operation
             else {
                 while (currentBlockNum <= latestBlock) {
-                    const block = await retryAsync(() => jsonRpcClient.getBlock(BlockNumber(currentBlockNum)));
+                    const block = await retryAsync(() => jsonRpcClient.getBlock(BlockNumber(currentBlockNum), blockFetchOptions));
                     if (block) {
-                        blocks.push(block);
+                        blocks.push(toL2Block(block));
                         currentBlockNum++;
                     } else {
                         // Break if a block isn't found to avoid getting stuck

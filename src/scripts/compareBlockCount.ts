@@ -78,11 +78,11 @@ async function main() {
       for (const blockNum of blocksToCheck) {
         try {
           console.log(`Checking block ${blockNum} on the node...`);
-          const block = await jsonRpcClient.getBlock(BlockNumber(blockNum));
+          const block = await jsonRpcClient.getBlock(BlockNumber(blockNum), { includeTransactions: true });
           
           if (block) {
             console.log(`✅ Block ${blockNum} exists on the node:`);
-            console.log(`   - Hash: ${(await block.hash()).toString()}`);
+            console.log(`   - Hash: ${block.hash.toString()}`);
             console.log(`   - Number: ${block.header.globalVariables.blockNumber}`);
             console.log(`   - Timestamp: ${new Date(Number(block.header.globalVariables.timestamp) * 1000).toISOString()}`);
             console.log(`   - Transactions: ${block.body.txEffects.length}`);
