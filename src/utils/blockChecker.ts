@@ -1,4 +1,5 @@
 import { createAztecNodeClient } from '@aztec/aztec.js/node';
+import { BlockNumber } from '@aztec/foundation/branded-types';
 import Block, { IBlock } from '../models/block.model.js';
 import Transaction, { ITransaction } from '../models/transaction.model.js';
 import { connectDB } from './db.js';
@@ -171,7 +172,7 @@ export class BlockChecker {
   async getL2Tips(): Promise<L2Tips> {
     try {
       // Call the node to get chain tips
-      const apiResponse: L2TipsApiResponse = await this.nodeClient.getL2Tips();
+      const apiResponse: L2TipsApiResponse = await this.nodeClient.getChainTips();
 
       // Transform the new API response structure to our expected format
       // Use proposed as latest, proven.block as proven, and finalized.block as finalized
@@ -289,13 +290,13 @@ export class BlockChecker {
       
       // Check each block against the node to see if it's been reorged out
       for (const block of ourBlocks) {
-        const nodeBlock = await this.nodeClient.getBlock(block.number);
+        const nodeBlock = await this.nodeClient.getBlock(BlockNumber(block.number));
         
         // If the node's block at this height has a different hash, it's been reorged
-        if (nodeBlock && (await nodeBlock.hash()).toString() !== block.hash) {
+        if (nodeBlock && nodeBlock.hash.toString() !== block.hash) {
           console.log(`Detected reorg: Block ${block.number} has different hash`);
           console.log(`Our hash: ${block.hash}`);
-          console.log(`Node hash: ${(await nodeBlock.hash()).toString()}`);
+          console.log(`Node hash: ${nodeBlock.hash.toString()}`);
           
           reorgedBlocks.push(block);
         }

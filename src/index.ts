@@ -4,6 +4,8 @@ import { L2Block } from '@aztec/stdlib/block';
 import type { BlockResponse } from '@aztec/stdlib/interfaces/client';
 import type { TxEffect, TxHash } from '@aztec/stdlib/tx';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
+import { ContractClassPublishedEvent } from '@aztec/protocol-contracts/class-registry';
+import { ContractInstancePublishedEvent } from '@aztec/protocol-contracts/instance-registry';
 import { Fr } from '@aztec/foundation/curves/bn254';
 import { BlockNumber } from '@aztec/foundation/branded-types';
 import { format } from 'util';
@@ -41,7 +43,6 @@ async function retryAsync<T>(
 
 const {
     PXE_URL = 'http://138.201.52.21:8080',
-    SEARCH_HEX_VALUE = '1a7e1badb79abdd38c684b3c8306ffe7ecb33c69e3380d9855730aaaa83a21a8'
 } = process.env;
 
 
@@ -202,42 +203,31 @@ async function main() {
                             addresses.push(new AztecAddress(logBuffer.subarray(i,i+32)));
                         }
                     });*/
-                    txEffect.privateLogs.forEach((log) => {
-                        const logHexString = log.toBuffer().toString('hex');
-                        const searchValueHex = SEARCH_HEX_VALUE;
-                        const startIndexInHex = logHexString.indexOf(searchValueHex);
-
-                        if (startIndexInHex !== -1) {
-                            const valueEndIndexInHex = startIndexInHex + searchValueHex.length;
-                            // Sonraki 32 bayt, hex'te 64 karakter anlamına gelir.
-                            if (logHexString.length >= valueEndIndexInHex + 64) {
-                                const addressHexString = logHexString.substring(valueEndIndexInHex, valueEndIndexInHex + 64);
-                                const addressBytes = Buffer.from(addressHexString, 'hex');
-                                addresses.push({
-                                    address: new AztecAddress(addressBytes),
-                                    blockNumber: blockTxEffect.blockNumber,
-                                    blockHash: blockTxEffect.blockHash,
-                                    txHash: txEffect.txHash.toString(),
-                                    timestamp: blockTxEffect.timestamp,
-                                });
-                            }
-                        }
-                    })
+                    ContractInstancePublishedEvent.extractContractInstanceEvents(txEffect.privateLogs).forEach(event => {
+                        addresses.push({
+                            address: event.address,
+                            blockNumber: blockTxEffect.blockNumber,
+                            blockHash: blockTxEffect.blockHash,
+                            txHash: txEffect.txHash.toString(),
+                            timestamp: blockTxEffect.timestamp,
+                        });
+                    });
 
                     var contractAddress: String[] = [];
                     var contractAddressLogs: String[] = [];
 
+                    ContractClassPublishedEvent.extractContractClassEvents(txEffect.contractClassLogs).forEach(event => {
+                        contractClassesWithBlockInfo.push({
+                            id: event.contractClassId,
+                            blockNumber: blockTxEffect.blockNumber,
+                            blockHash: blockTxEffect.blockHash,
+                            txHash: txEffect.txHash.toString(),
+                            timestamp: blockTxEffect.timestamp,
+                        });
+                    });
+
                     txEffect.contractClassLogs.forEach((log) => {
                         contractAddress.push(log.contractAddress.toBuffer().toString('hex'));
-                        if(log.contractAddress.toBuffer().toString('hex') === "0000000000000000000000000000000000000000000000000000000000000003") {
-                            contractClassesWithBlockInfo.push({
-                                id: log.fields.fields[1],
-                                blockNumber: blockTxEffect.blockNumber,
-                                blockHash: blockTxEffect.blockHash,
-                                txHash: txEffect.txHash.toString(),
-                                timestamp: blockTxEffect.timestamp,
-                            })
-                        }
                         var contractAddressLog: String[] = []; 
                         log.fields.fields.forEach((field) => {
                             contractAddressLog.push(field.toBuffer().toString('hex'));
