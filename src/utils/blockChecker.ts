@@ -1,5 +1,5 @@
-import { createAztecNodeClient } from '@aztec/aztec.js/node';
-import { BlockNumber } from '@aztec/foundation/branded-types';
+import { createAztecNodeClient } from '@aztec-labs/aztec.js/node';
+import { BlockNumber } from '@aztec-labs/foundation/branded-types';
 import Block, { IBlock } from '../models/block.model.js';
 import Transaction, { ITransaction } from '../models/transaction.model.js';
 import { connectDB } from './db.js';

@@ -1,7 +1,7 @@
 import { connectDB } from '../utils/db.js';
 import Block from '../models/block.model.js';
-import { createAztecNodeClient } from '@aztec/aztec.js/node';
-import { BlockNumber } from '@aztec/foundation/branded-types';
+import { createAztecNodeClient } from '@aztec-labs/aztec.js/node';
+import { BlockNumber } from '@aztec-labs/foundation/branded-types';
 
 const { PXE_URL = 'http://138.201.52.21:8080' } = process.env;
 
