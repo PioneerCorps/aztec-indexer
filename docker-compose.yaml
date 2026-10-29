@@ -10,13 +10,13 @@ services:
       - mongo-data2:/data/db
 
   indexer:
-    build: .
+    image: bdehri/aztecexplorer-indexer:6.0.0-0.0.1
     container_name: indexer
     depends_on:
       - mongo
     environment:
       - DB_URL=mongodb://mongo:27017
-      - PXE_URL=http://138.201.52.21:8080
+      - PXE_URL=https://aztec-mainnet.drpc.org
 
   api:
     image: indexer-api:0.3.0
